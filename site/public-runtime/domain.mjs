@@ -23,8 +23,42 @@ const add = (w, p, kind, data, shared = []) => {
 };
 const sameSet = (a, b) => Array.isArray(a) && new Set(a).size === a.length && a.length === b.length && a.every(x => b.includes(x));
 const current = (w, p, d) => get(w, d.shipmentId, 'shipment');
+const postalCode=value=>{check(typeof value==='string'&&/^\d{5}-?\d{3}$/.test(value),'INVALID_CEP');return value.replace('-','');};
+function parcelSnapshot(values){
+  check(Array.isArray(values)&&values.length>0&&values.length<=200,'INVALID_PACKAGES');const seen=new Set();
+  return values.map(value=>{
+    check(value&&typeof value.id==='string'&&value.id.length>0&&value.id.length<=128,'INVALID_TEXT');check(!seen.has(value.id),'DUPLICATE_PACKAGE');seen.add(value.id);
+    const parcel={id:value.id};for(const key of ['weightKg','lengthCm','widthCm','heightCm']){
+      const input=value[key];check(typeof input==='string'&&/^\d{1,10}(\.\d{1,6})?$/.test(input)&&Number(input)>=.000001,'INVALID_DECIMAL');
+      const[whole,fraction='']=input.split('.'),tail=fraction.replace(/0+$/,'');parcel[key]=whole.replace(/^0+(?=\d)/,'')+(tail?'.'+tail:'');
+    }parcel.cargoClass=value.cargoClass===undefined?'GENERAL':value.cargoClass;return parcel;
+  }).sort((a,b)=>a.id.localeCompare(b.id));
+}
+const quoteContent=quote=>canonical([postalCode(quote.originCep),postalCode(quote.destinationCep),parcelSnapshot(quote.packages)]);
+function orderQuoteCurrent(w,order){
+  const quote=get(w,order.quoteId,'quote');check(new Date(w.clock)<new Date(quote.expiresAt),'QUOTE_STALE',409);
+  if(order.quoteContentSignature)check(quoteContent(quote)===order.quoteContentSignature,'QUOTE_STALE',409);
+  else check(canonical(parcelSnapshot(quote.packages))===canonical(parcelSnapshot(order.packages))&&postalCode(quote.destinationCep)===postalCode(order.destinationCep||order.destinationSnapshot?.postalCode),'QUOTE_STALE',409);
+  return quote;
+}
+function masterValues(w,p,kind,input,exclude){
+  const fields={location:['name','postalCode','lat','lon'],zone:['name','from','to','priority'],calendar:['name','timezone','cutoff','holidays','weekdays'],service:['name','calendarId','transitDays','maxPackageKg','maxShipmentKg']},optional=kind==='location'?['addressLine','number','complement','district','city','uf','deliveryInstructions']:[];
+  check(fields[kind]&&input&&typeof input==='object'&&!Array.isArray(input),'INVALID_MASTER');check(fields[kind].every(k=>Object.hasOwn(input,k))&&Object.keys(input).every(k=>fields[kind].includes(k)||optional.includes(k)),'MASTER_FIELDS_INVALID');const value=copy(input);value.name=text(value.name);
+  for(const key of optional)if(Object.hasOwn(value,key))check(typeof value[key]==='string'&&value[key].length<=(key==='deliveryInstructions'?1000:200),'INVALID_DELIVERY_ADDRESS');
+  if(kind==='location'){
+    value.postalCode=postalCode(value.postalCode);for(const[key,limit]of [['lat',90],['lon',180]])check(typeof value[key]==='number'&&Number.isFinite(value[key])&&Math.abs(value[key])<=limit,'INVALID_COORDINATE');
+    if(value.uf)check('AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').includes(value.uf),'INVALID_UF');
+  }else if(kind==='zone'){
+    value.from=postalCode(value.from);value.to=postalCode(value.to);check(value.from<=value.to,'INVALID_RANGE');check(Number.isInteger(value.priority),'INVALID_PRIORITY');check(!list(w,'zone').some(z=>z.org===p.org&&z.id!==exclude&&z.priority===value.priority&&z.from===value.from&&z.to===value.to),'AMBIGUOUS_ZONE');
+  }else if(kind==='calendar'){
+    check(typeof value.cutoff==='string'&&/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value.cutoff),'INVALID_CUTOFF');
+    try{new Intl.DateTimeFormat('pt-BR',{timeZone:value.timezone}).format(new Date());}catch{throw new ApiError('INVALID_TIMEZONE');}
+    check(typeof value.timezone==='string'&&value.timezone,'INVALID_TIMEZONE');check(Array.isArray(value.holidays)&&value.holidays.every(day=>{if(typeof day!=='string'||!/^\d{4}-\d\d-\d\d$/.test(day))return false;const date=new Date(day+'T00:00:00Z');return Number.isFinite(date.valueOf())&&date.toISOString().slice(0,10)===day;}),'INVALID_CALENDAR');check(Array.isArray(value.weekdays)&&value.weekdays.length&&value.weekdays.every(day=>Number.isInteger(day)&&day>=0&&day<=6),'INVALID_WEEKDAYS');
+  }else{get(w,value.calendarId,'calendar');check(Number.isInteger(value.transitDays)&&value.transitDays>=0&&value.transitDays<=60,'INVALID_TRANSIT');number(value.maxPackageKg,.001);number(value.maxShipmentKg,.001);}
+  return value;
+}
 const roles = {
-  quote:['admin','planner'], order_create:['admin','planner'], import_preview:['admin','planner'], import_commit:['admin','planner'], order_release:['admin','planner'], order_change:['admin','planner'], change_resolve:['admin','planner'], plan:['admin','planner'], plan_commit:['admin','planner'], replan:['admin','planner'], replan_approve:['admin','planner'], tender:['admin','planner'], offer_respond:['admin','planner','operator'], counter_accept:['admin','planner'], expire_offers:['admin','planner'], rfq_create:['admin','planner'], rfq_bid:['admin','planner'], rfq_select:['admin','planner'], fleet_create:['admin','planner'], maintenance:['admin','operator'], maintenance_finish:['admin','operator'], aggregate_contract:['admin','planner'], expense:['admin','operator','driver'], expense_reconcile:['admin','auditor'], expense_close:['admin','auditor'], subcontract:['admin','planner'], label_request:['admin','operator'], stage:['admin','operator','driver'], tracking:['admin','operator','driver'], pod:['admin','operator','driver'], offline_sync:['admin','operator','driver'], upload_pod:['admin','operator','driver'], claim_create:['admin','operator','driver'], claim_resolve:['admin','operator'], return_create:['admin','operator'], return_progress:['admin','operator'], tolerance:['admin','auditor'], invoice_create:['admin','operator'], invoice_audit:['admin','auditor'], dispute_resolve:['admin','auditor'], approval_request:['admin','auditor'], approval_decide:['approver'], reverse_request:['admin','auditor'], settlement_request:['admin','auditor'], settlement_reverse_request:['admin','auditor'], master_create:['admin','planner'], master_update:['admin','planner'], rate_create:['admin','planner'], rate_publish:['admin','planner'], org_create:['admin','platform_admin'], user_create:['admin','platform_admin'], user_roles:['admin','platform_admin'], user_revoke:['admin','platform_admin'], relationship:['admin'], relationship_respond:['admin'], adapter_config_create:['admin'], adapter_enqueue:['admin','operator'], outbox_process:['admin','operator'], outbox_query:['admin','operator'], outbox_requeue:['admin','operator'], fiscal_policy:['admin'], fiscal_evaluate:['admin','operator'], fiscal_cancel:['admin','operator'], fiscal_profile_create:['admin','planner'], fiscal_profile_revise:['admin','planner'], fiscal_readiness_assess:['admin','planner'], fiscal_local_preflight:['admin','operator'], scenario_save:['admin','planner'], backup:['admin','platform_admin'], simulation_reset:['admin','platform_admin'], inbox_receive:['admin','operator']
+  quote:['admin','planner'], order_create:['admin','planner'], import_preview:['admin','planner'], import_commit:['admin','planner'], order_release:['admin','planner'], order_change:['admin','planner'], change_resolve:['admin','planner'], plan:['admin','planner'], plan_commit:['admin','planner'], replan:['admin','planner'], replan_approve:['admin','planner'], tender:['admin','planner'], offer_respond:['admin','planner','operator'], counter_accept:['admin','planner'], expire_offers:['admin','planner'], rfq_create:['admin','planner'], rfq_bid:['admin','planner'], rfq_select:['admin','planner'], fleet_create:['admin','planner'], fleet_update:['admin','planner'], maintenance:['admin','operator'], maintenance_finish:['admin','operator'], aggregate_contract:['admin','planner'], expense:['admin','operator','driver'], expense_reconcile:['admin','auditor'], expense_close:['admin','auditor'], subcontract:['admin','planner'], label_request:['admin','operator'], stage:['admin','operator','driver'], tracking:['admin','operator','driver'], pod:['admin','operator','driver'], offline_sync:['admin','operator','driver'], upload_pod:['admin','operator','driver'], claim_create:['admin','operator','driver'], claim_resolve:['admin','operator'], return_create:['admin','operator'], return_progress:['admin','operator'], tolerance:['admin','auditor'], invoice_create:['admin','operator'], invoice_audit:['admin','auditor'], dispute_resolve:['admin','auditor'], approval_request:['admin','auditor'], approval_decide:['approver'], reverse_request:['admin','auditor'], settlement_request:['admin','auditor'], settlement_reverse_request:['admin','auditor'], master_create:['admin','planner'], master_update:['admin','planner'], rate_create:['admin','planner'], rate_publish:['admin','planner'], org_create:['admin','platform_admin'], user_create:['admin','platform_admin'], user_roles:['admin','platform_admin'], user_revoke:['admin','platform_admin'], relationship:['admin'], relationship_respond:['admin'], adapter_config_create:['admin'], adapter_enqueue:['admin','operator'], outbox_process:['admin','operator'], outbox_query:['admin','operator'], outbox_requeue:['admin','operator'], fiscal_policy:['admin'], fiscal_evaluate:['admin','operator'], fiscal_cancel:['admin','operator'], fiscal_profile_create:['admin','planner'], fiscal_profile_revise:['admin','planner'], fiscal_readiness_assess:['admin','planner'], fiscal_local_preflight:['admin','operator'], scenario_save:['admin','planner'], backup:['admin','platform_admin'], simulation_reset:['admin','platform_admin'], inbox_receive:['admin','operator']
 };
 export const COMMANDS = Object.freeze(Object.keys(roles));
 function cleanUser(u) {
@@ -70,11 +104,9 @@ function businessDate(w, calendar, days) {
   return {pickup, delivery: date.toISOString().slice(0,10)};
 }
 export function calculate(w, p, d) {
-  check(/^\d{8}$/.test(d.originCep) && /^\d{8}$/.test(d.destinationCep), 'INVALID_CEP');
-  check(Array.isArray(d.packages) && d.packages.length && new Set(d.packages.map(x => x.id)).size === d.packages.length, 'INVALID_PACKAGES');
-  const packages = d.packages.map(x => ({...copy(x), id: text(x.id), weightKg: String(number(x.weightKg, .000001))}));
+  const originCep=postalCode(d.originCep),destinationCep=postalCode(d.destinationCep),packages=parcelSnapshot(d.packages);
   const weight = packages.reduce((a,x) => a + Number(x.weightKg), 0), candidates = [];
-  const zones = list(w, 'zone').filter(z => String(d.destinationCep) >= z.from && String(d.destinationCep) <= z.to);
+  const zones = list(w, 'zone').filter(z => destinationCep >= z.from && destinationCep <= z.to);
   const rates = list(w, 'rate').filter(r => r.org === p.org && r.side === 'BUY' && r.status === 'PUBLISHED' && new Date(r.validFrom) <= new Date(w.clock) && new Date(w.clock) < new Date(r.validTo) && weight >= Number(r.minKg) && weight < Number(r.maxKg) && zones.some(z => z.id === r.zoneId));
   const groups = new Map(); for (const rate of rates) { const key = `${rate.carrierOrg}:${rate.serviceId}`; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(rate); }
   for (const group of groups.values()) {
@@ -88,20 +120,36 @@ export function calculate(w, p, d) {
     candidates.push({carrierOrg:r.carrierOrg,serviceId:r.serviceId,rateId:r.id,rateSnapshot:copy(r),calendarSnapshot:copy(calendar),lines,cost:cash(lines.reduce((a,x)=>a+Number(x.amount),0)),...businessDate(w,calendar,Number(service.transitDays || 0))});
   }
   check(candidates.length, 'NO_ELIGIBLE_COVERAGE'); candidates.sort((a,b)=>Number(a.cost)-Number(b.cost)||a.carrierOrg.localeCompare(b.carrierOrg));
-  return {originCep:d.originCep,destinationCep:d.destinationCep,packages,weightKg:String(weight),candidates,expiresAt:new Date(new Date(w.clock).valueOf()+15*60000).toISOString(),simulation:true};
+  return {originCep,destinationCep,packages,weightKg:String(weight),candidates,expiresAt:new Date(new Date(w.clock).valueOf()+15*60000).toISOString(),simulation:true};
 }
 export function simulate(w,p,d) { return {status:'SIMULATION_ONLY',result:calculate(w,p,d),automaticAction:false}; }
 function orderValues(w,p,d) {
   const quote=get(w,d.quoteId,'quote');check(new Date(w.clock)<new Date(quote.expiresAt),'QUOTE_EXPIRED',409);
-  const candidate=quote.candidates[Number(d.candidate || 0)];check(candidate,'INVALID_CANDIDATE');const location=get(w,d.locationId,'location');
+  const index=d.candidate===undefined?0:d.candidate;check(Number.isInteger(index)&&index>=0&&index<quote.candidates.length,'INVALID_CANDIDATE');const candidate=quote.candidates[index],location=get(w,d.locationId,'location');
+  const packages=parcelSnapshot(d.packages);check(canonical(packages)===canonical(parcelSnapshot(quote.packages)),'QUOTE_CONTENT_MISMATCH',409);check(postalCode(location.postalCode)===postalCode(quote.destinationCep),'DESTINATION_MISMATCH');
   const from=timestamp(d.windowStart),to=timestamp(d.windowEnd);check(from<to,'INVALID_WINDOW');
-  return {quoteId:quote.id,candidate:copy(candidate),packages:copy(quote.packages),consumerCharge:money(d.consumerCharge),subsidy:cash(Number(candidate.cost)-Number(d.consumerCharge)),locationId:location.id,destinationSnapshot:copy(location),windowStart:from,windowEnd:to};
+  return {quoteId:quote.id,candidate:copy(candidate),packages,originCep:postalCode(quote.originCep),destinationCep:postalCode(quote.destinationCep),quoteContentSignature:quoteContent(quote),consumerCharge:money(d.consumerCharge),subsidy:cash(Number(candidate.cost)-Number(d.consumerCharge)),locationId:location.id,destinationSnapshot:copy(location),windowStart:from,windowEnd:to};
+}
+function pendingEditValues(w,p,input){
+  check(input&&typeof input==='object'&&!Array.isArray(input),'RECOTATION_REQUIRED');const values=copy(input);
+  if(values.candidate&&typeof values.candidate==='object'&&!Array.isArray(values.candidate)){
+    // Earlier public versions persisted the exact candidate snapshot, not its
+    // index. Resolve it only by full equality; never guess candidate zero.
+    const quote=get(w,values.quoteId,'quote');check(new Date(w.clock)<new Date(quote.expiresAt),'QUOTE_EXPIRED',409);
+    const matches=quote.candidates.map((candidate,index)=>({candidate,index})).filter(x=>canonical(x.candidate)===canonical(values.candidate));check(matches.length===1,'QUOTE_CONTENT_MISMATCH',409);
+    if(values.originCep!==undefined)check(postalCode(values.originCep)===postalCode(quote.originCep),'QUOTE_CONTENT_MISMATCH',409);
+    if(values.destinationCep!==undefined)check(postalCode(values.destinationCep)===postalCode(quote.destinationCep),'DESTINATION_MISMATCH',409);
+    if(values.destinationSnapshot!==undefined){check(values.destinationSnapshot&&typeof values.destinationSnapshot==='object'&&!Array.isArray(values.destinationSnapshot),'DESTINATION_MISMATCH',409);check(postalCode(values.destinationSnapshot.postalCode)===postalCode(quote.destinationCep),'DESTINATION_MISMATCH',409);}
+    values.candidate=matches[0].index;
+  }
+  return orderValues(w,p,values);
 }
 function releaseReservations(w,s) { for (const r of list(w,'reservation').filter(r=>r.shipmentId===s.id&&r.status==='ACTIVE')) update(r,{status:'RELEASED'}); }
-function cancelShipment(w,s) { update(s,{status:'CANCELLED'});releaseReservations(w,s);if(s.assignmentId)update(get(w,s.assignmentId,'assignment'),{status:'CANCELLED'});for(const oid of s.orderIds){const o=get(w,oid,'order');if(o.status!=='CANCELLED')update(o,{status:'RELEASED',shipmentIds:(o.shipmentIds||[]).filter(x=>x!==s.id)});} }
+function cancelShipment(w,s) { update(s,{status:'CANCELLED'});releaseReservations(w,s);if(s.assignmentId)update(get(w,s.assignmentId,'assignment'),{status:'CANCELLED'});for(const tender of list(w,'tender').filter(t=>t.shipmentId===s.id&&t.status==='OPEN')){for(const offer of Object.values(tender.offers||{}))if(['PENDING','COUNTER'].includes(offer.status))offer.status='CANCELLED';update(tender,{status:'CANCELLED'});}for(const oid of s.orderIds){const o=get(w,oid,'order');if(o.status!=='CANCELLED'){const ids=(o.shipmentIds||[]).filter(x=>x!==s.id);update(o,{status:ids.length?'PLANNED':'RELEASED',shipmentIds:ids});}} }
 function planValues(w,p,d) {
   check(Array.isArray(d.orderIds)&&d.orderIds.length&&new Set(d.orderIds).size===d.orderIds.length,'INVALID_ORDERS');
   const orders=d.orderIds.map(x=>get(w,x,'order'));check(orders.every(o=>o.status==='RELEASED'),'ORDER_NOT_RELEASED');
+  for(const order of orders)orderQuoteCurrent(w,order);
   const packages=orders.flatMap(o=>o.packages.map(x=>({...copy(x),orderId:o.id,key:`${o.id}:${x.id}`}))), weight=packages.reduce((a,x)=>a+Number(x.weightKg),0), capacity=number(d.capacityKg,.001), reasons=[];
   if(weight>capacity)reasons.push('CAPACITY_EXCEEDED');if(new Set(packages.map(x=>x.cargoClass)).size>1)reasons.push('CARGO_INCOMPATIBLE');
   let pos=get(w,d.originLocationId,'location'),time=new Date(timestamp(d.start)).valueOf(),kmTotal=0;const speed=number(d.speedKmh,1),remaining=[...orders],stops=[];
@@ -112,6 +160,7 @@ function planValues(w,p,d) {
 }
 function reserve(w,p,t,carrier,vehicleId,driverId,price) {
   const s=get(w,t.shipmentId,'shipment');check(t.status==='OPEN'&&new Date(w.clock)<new Date(t.expiresAt),'OFFER_EXPIRED',409);check(!s.assignmentId,'ALREADY_ASSIGNED',409);
+  check(s.status==='OFFERED','SHIPMENT_NOT_OFFERED',409);check(s.orderIds.every(oid=>get(w,oid,'order').status==='PLANNED'),'ORDER_NOT_PLANNED',409);
   const v=get(w,vehicleId,'resource'),driver=get(w,driverId,'resource');check(v.type==='VEHICLE'&&driver.type==='DRIVER'&&v.org===carrier&&driver.org===carrier,'INVALID_RESOURCES');check(Number(v.capacityKg)>=Number(s.weightKg),'CAPACITY_EXCEEDED');check(new Date(driver.licenseValidTo)>new Date(s.end),'LICENSE_EXPIRED');
   const overlap=x=>new Date(x.start)<new Date(s.end)&&new Date(s.start)<new Date(x.end);
   check(!list(w,'maintenance').some(m=>m.status==='SCHEDULED'&&[v.id,driver.id].includes(m.resourceId)&&overlap(m)),'RESOURCE_MAINTENANCE',409);
@@ -145,18 +194,29 @@ function applyEffect(w,p,m,result){
 export const handlers={
   quote:(w,p,d)=>add(w,p,'quote',calculate(w,p,d)),
   scenario_save:(w,p,d)=>add(w,p,'scenario',{name:text(d.name),input:copy(d.input||d),mode:'SIMULATION_ONLY'}),
-  master_create:(w,p,d)=>{check(['location','zone','calendar','service'].includes(d.kind),'INVALID_MASTER');const v=copy(d.values||{});text(v.name);if(d.kind==='location'){check(/^\d{8}$/.test(v.postalCode),'INVALID_CEP');number(Math.abs(Number(v.lat)));number(Math.abs(Number(v.lon)));}if(d.kind==='zone')check(/^\d{8}$/.test(v.from)&&/^\d{8}$/.test(v.to)&&v.from<=v.to,'INVALID_ZONE');if(d.kind==='service')get(w,v.calendarId,'calendar');return add(w,p,d.kind,{...v,status:'ACTIVE',history:[]});},
-  master_update:(w,p,d)=>{const o=get(w,d.id);version(o,d);check(['location','zone','calendar','service'].includes(o.kind),'INVALID_MASTER');check(!Object.keys(d.values||{}).some(x=>['id','org','kind','version','createdBy','createdAt','history'].includes(x)),'IMMUTABLE_IDENTITY');const previous=copy(o);delete previous.history;o.history||=[];o.history.push({at:w.clock,values:previous});return update(o,d.values||{});},
+  master_create:(w,p,d)=>add(w,p,d.kind,{...masterValues(w,p,d.kind,d.values),status:'ACTIVE',history:[]}),
+  master_update:(w,p,d)=>{const o=get(w,d.id);version(o,d);const values=masterValues(w,p,o.kind,d.values,o.id),previous=copy(o);delete previous.history;o.history||=[];o.history.push({at:w.clock,values:previous});return update(o,values);},
   rate_create:(w,p,d)=>{check(['BUY','SELL'].includes(d.side),'INVALID_RATE_SIDE');get(w,d.zoneId,'zone');get(w,d.serviceId,'service');check(timestamp(d.validFrom)<timestamp(d.validTo)&&number(d.minKg)<number(d.maxKg),'INVALID_RATE');return add(w,p,'rate',{...copy(d),base:money(d.base),perKg:String(number(d.perKg)),status:'DRAFT'});},
   rate_publish:(w,p,d)=>{const r=get(w,d.id,'rate');version(r,d);check(r.status==='DRAFT','RATE_IMMUTABLE',409);check(!list(w,'rate').some(x=>x.id!==r.id&&x.org===r.org&&x.carrierOrg===r.carrierOrg&&x.zoneId===r.zoneId&&x.serviceId===r.serviceId&&x.side===r.side&&x.status==='PUBLISHED'&&Number(x.priority)===Number(r.priority)&&new Date(x.validFrom)<new Date(r.validTo)&&new Date(r.validFrom)<new Date(x.validTo)&&Number(x.minKg)<Number(r.maxKg)&&Number(r.minKg)<Number(x.maxKg)),'AMBIGUOUS_RATE',409);return update(r,{status:'PUBLISHED'});},
   order_create:(w,p,d)=>{text(d.externalId);check(!list(w,'order').some(o=>o.org===p.org&&o.externalId===d.externalId&&o.status!=='CANCELLED'),'DUPLICATE_ORDER',409);return add(w,p,'order',{externalId:d.externalId,...orderValues(w,p,d),status:'VALIDATED',shipmentIds:[],revisions:[]});},
   import_preview:(w,p,d)=>{check(Array.isArray(d.rows)&&d.rows.length,'INVALID_ROWS');const seen=new Set();const rows=d.rows.map((row,i)=>{const input={...copy(d.defaults||{}),...copy(row)};let error=null;try{orderValues(w,p,input);text(input.externalId);check(!seen.has(input.externalId)&&!list(w,'order').some(o=>o.externalId===input.externalId&&o.org===p.org&&o.status!=='CANCELLED'),'DUPLICATE_ORDER');}catch(e){error=e.code||'INVALID_ROW';}seen.add(input.externalId);return {line:i+1,input,valid:!error,error};});return add(w,p,'import',{rows,valid:rows.filter(x=>x.valid).length,errors:rows.filter(x=>!x.valid).length,status:'PREVIEW'});},
   import_commit:(w,p,d)=>{const batch=get(w,d.id,'import');version(batch,d);check(batch.status==='PREVIEW','IMPORT_ALREADY_COMMITTED');check(!batch.errors||d.validOnly,'IMPORT_HAS_ERRORS');const ids=batch.rows.filter(x=>x.valid).map(x=>handlers.order_create(w,p,x.input).id);return update(batch,{status:'COMMITTED',orderIds:ids});},
-  order_release:(w,p,d)=>{const o=get(w,d.id,'order');version(o,d);check(o.status==='VALIDATED','INVALID_STATE');return update(o,{status:'RELEASED'});},
-  order_change:(w,p,d)=>{const o=get(w,d.id,'order');version(o,d);check(['CANCEL','EDIT'].includes(d.operation),'INVALID_OPERATION');text(d.reason);check(o.status!=='CANCELLED','INVALID_STATE');const ships=list(w,'shipment').filter(s=>s.status!=='CANCELLED'&&s.orderIds.includes(o.id));if(ships.some(s=>s.assignmentId||['IN_TRANSIT','PARTIAL','DELIVERED'].includes(s.status)))return add(w,p,'change',{orderId:o.id,orderVersion:o.version,operation:d.operation,newValues:d.operation==='EDIT'?orderValues(w,p,d.values):null,reason:d.reason,affectedShipments:ships.map(s=>s.id),status:ships.some(s=>['IN_TRANSIT','PARTIAL','DELIVERED'].includes(s.status))?'COMPENSATION_REQUIRED':'APPROVAL_REQUIRED'});for(const s of ships)cancelShipment(w,s);o.revisions.push(copy(o));return update(o,d.operation==='CANCEL'?{status:'CANCELLED',shipmentIds:[]}:{...orderValues(w,p,d.values),status:'VALIDATED',shipmentIds:[]});},
-  change_resolve:(w,p,d)=>{const c=get(w,d.id,'change');version(c,d);check(['APPROVAL_REQUIRED','COMPENSATION_REQUIRED'].includes(c.status),'INVALID_STATE');text(d.resolution);const o=get(w,c.orderId,'order');check(o.version===c.orderVersion,'ORDER_CHANGED');if(c.status==='COMPENSATION_REQUIRED'){add(w,p,'compensation',{changeId:c.id,resolution:d.resolution,realPayment:false});return update(c,{status:'COMPENSATED_HISTORY_PRESERVED',resolution:d.resolution});}for(const sid of c.affectedShipments){const s=get(w,sid,'shipment');check(!['IN_TRANSIT','PARTIAL','DELIVERED'].includes(s.status),'EXECUTION_STARTED');cancelShipment(w,s);}update(o,c.operation==='CANCEL'?{status:'CANCELLED'}:{...c.newValues,status:'VALIDATED'});return update(c,{status:'APPLIED',resolution:d.resolution});},
+  order_release:(w,p,d)=>{const o=get(w,d.id,'order');version(o,d);check(o.status==='VALIDATED','INVALID_STATE');orderQuoteCurrent(w,o);return update(o,{status:'RELEASED'});},
+  order_change:(w,p,d)=>{
+    const o=get(w,d.id,'order');version(o,d);check(['CANCEL','EDIT'].includes(d.operation),'INVALID_OPERATION');text(d.reason);check(o.status!=='CANCELLED','INVALID_STATE');const ships=list(w,'shipment').filter(s=>s.status!=='CANCELLED'&&s.orderIds.includes(o.id));
+    if(ships.some(s=>s.assignmentId||['IN_TRANSIT','PARTIAL','DELIVERED'].includes(s.status)))return add(w,p,'change',{orderId:o.id,orderVersion:o.version,operation:d.operation,newValues:copy(d.values||{}),reason:d.reason,affectedShipments:ships.map(s=>s.id),status:ships.some(s=>['IN_TRANSIT','PARTIAL','DELIVERED'].includes(s.status))?'COMPENSATION_REQUIRED':'APPROVAL_REQUIRED'});
+    const replacement=d.operation==='EDIT'?orderValues(w,p,d.values):null,previous=copy(o);delete previous.revisions;for(const shipment of ships)cancelShipment(w,shipment);o.revisions||=[];o.revisions.push(previous);
+    return update(o,d.operation==='CANCEL'?{status:'CANCELLED',shipmentIds:[]}:{...replacement,status:'VALIDATED',shipmentIds:[]});
+  },
+  change_resolve:(w,p,d)=>{
+    const c=get(w,d.id,'change');version(c,d);check(['APPROVAL_REQUIRED','COMPENSATION_REQUIRED'].includes(c.status),'INVALID_STATE');text(d.resolution);const o=get(w,c.orderId,'order');check(o.version===c.orderVersion,'ORDER_CHANGED');
+    if(c.status==='COMPENSATION_REQUIRED'){add(w,p,'compensation',{changeId:c.id,resolution:d.resolution,realPayment:false});return update(c,{status:'COMPENSATED_HISTORY_PRESERVED',resolution:d.resolution});}
+    const replacement=c.operation==='EDIT'?pendingEditValues(w,p,c.newValues):null,previous=copy(o);delete previous.revisions;
+    for(const sid of c.affectedShipments){const shipment=get(w,sid,'shipment');check(!['IN_TRANSIT','PARTIAL','DELIVERED'].includes(shipment.status),'EXECUTION_STARTED');cancelShipment(w,shipment);}o.revisions||=[];o.revisions.push(previous);
+    update(o,c.operation==='CANCEL'?{status:'CANCELLED',shipmentIds:[]}:{...replacement,status:'VALIDATED',shipmentIds:[]});return update(c,{status:'APPLIED',resolution:d.resolution});
+  },
   plan:(w,p,d)=>add(w,p,'plan',planValues(w,p,d)),
-  plan_commit:(w,p,d)=>{const plan=get(w,d.id,'plan');version(plan,d);check(plan.status==='FEASIBLE','PLAN_NOT_FEASIBLE');for(const oid of plan.orderIds){const o=get(w,oid,'order');check(o.status==='RELEASED'&&o.version===plan.orderVersions[oid],'PLAN_STALE',409);}check(!list(w,'shipment').some(s=>s.status!=='CANCELLED'&&s.packages.some(x=>plan.packages.some(y=>y.key===x.key))),'ALREADY_ALLOCATED');const s=add(w,p,'shipment',{...copy(plan),status:'PLANNED',planId:plan.id,planVersion:1,assignmentId:null,delivered:[],lastEventAt:null,tracking:'PLANNED',stage:'PICKUP',labelStatus:'NONE',fiscalStatus:'NOT_EVALUATED',promisedAt:plan.orderIds.map(x=>get(w,x,'order').windowEnd).sort().at(-1),completedAt:null});for(const oid of plan.orderIds)update(get(w,oid,'order'),{status:'PLANNED',shipmentIds:[s.id]});update(plan,{status:'COMMITTED',shipmentId:s.id});return s;},
+  plan_commit:(w,p,d)=>{const plan=get(w,d.id,'plan');version(plan,d);check(plan.status==='FEASIBLE','PLAN_NOT_FEASIBLE');for(const oid of plan.orderIds){const o=get(w,oid,'order');check(o.status==='RELEASED'&&o.version===plan.orderVersions[oid],'PLAN_STALE',409);orderQuoteCurrent(w,o);}check(!list(w,'shipment').some(s=>s.status!=='CANCELLED'&&s.packages.some(x=>plan.packages.some(y=>y.key===x.key))),'ALREADY_ALLOCATED');const s=add(w,p,'shipment',{...copy(plan),status:'PLANNED',planId:plan.id,planVersion:1,assignmentId:null,delivered:[],lastEventAt:null,tracking:'PLANNED',stage:'PICKUP',labelStatus:'NONE',fiscalStatus:'NOT_EVALUATED',promisedAt:plan.orderIds.map(x=>get(w,x,'order').windowEnd).sort().at(-1),completedAt:null});for(const oid of plan.orderIds)update(get(w,oid,'order'),{status:'PLANNED',shipmentIds:[s.id]});update(plan,{status:'COMMITTED',shipmentId:s.id});return s;},
   replan:(w,p,d)=>{const s=get(w,d.id,'shipment');version(s,d);text(d.reason);check(!['IN_TRANSIT','PARTIAL','DELIVERED'].includes(s.status),'EXECUTION_STARTED');if(s.assignmentId)return add(w,p,'replanChange',{shipmentId:s.id,shipmentVersion:s.version,plan:copy(d.plan),reason:d.reason,status:'PENDING'});const orders=s.orderIds.map(x=>get(w,x,'order'));const old=orders.map(o=>o.status);orders.forEach(o=>o.status='RELEASED');const computed=planValues(w,p,{...d.plan,orderIds:s.orderIds});orders.forEach((o,i)=>o.status=old[i]);check(computed.status==='FEASIBLE','PLAN_NOT_FEASIBLE');cancelShipment(w,s);return add(w,p,'plan',planValues(w,p,{...d.plan,orderIds:s.orderIds}));},
   replan_approve:(w,p,d)=>{const c=get(w,d.id,'replanChange');version(c,d);check(c.status==='PENDING','INVALID_STATE');const s=get(w,c.shipmentId,'shipment');check(s.version===c.shipmentVersion,'VERSION_CONFLICT',409);const orders=s.orderIds.map(x=>get(w,x,'order')),old=orders.map(o=>o.status);orders.forEach(o=>o.status='RELEASED');const computed=planValues(w,p,{...c.plan,orderIds:s.orderIds});orders.forEach((o,i)=>o.status=old[i]);check(computed.status==='FEASIBLE','PLAN_NOT_FEASIBLE');cancelShipment(w,s);update(c,{status:'APPROVED',reason:text(d.reason)});return add(w,p,'plan',planValues(w,p,{...c.plan,orderIds:s.orderIds}));},
   tender:(w,p,d)=>{const s=current(w,p,d);version(s,d);check(['PLANNED','OFFERED'].includes(s.status)&&!s.assignmentId,'INVALID_STATE');check(Array.isArray(d.carriers)&&d.carriers.length,'INVALID_CARRIERS');check(timestamp(d.expiresAt)>w.clock,'INVALID_EXPIRY');for(const t of list(w,'tender').filter(t=>t.shipmentId===s.id&&t.status==='OPEN'))update(t,{status:'CANCELLED'});const t=add(w,p,'tender',{shipmentId:s.id,expiresAt:timestamp(d.expiresAt),offers:Object.fromEntries(d.carriers.map(c=>[c,{status:'PENDING',price:s.cost}])),status:'OPEN'},d.carriers);update(s,{status:'OFFERED'});return t;},
@@ -167,6 +227,20 @@ export const handlers={
   rfq_bid:(w,p,d)=>{const r=get(w,d.id,'rfq');version(r,d);check(r.status==='OPEN'&&r.expiresAt>w.clock&&r.carriers.includes(p.org),'INVALID_BID');r.bids[p.org]={base:money(d.base),perKg:String(number(d.perKg))};return update(r);},
   rfq_select:(w,p,d)=>{const r=get(w,d.id,'rfq');version(r,d);check(r.status==='OPEN'&&r.expiresAt>w.clock&&r.bids[d.carrierOrg],'INVALID_BID');const draft=handlers.rate_create(w,p,{...d.rate,...r.bids[d.carrierOrg],carrierOrg:d.carrierOrg});update(r,{status:'SELECTED',draftRateId:draft.id});return draft;},
   fleet_create:(w,p,d)=>{check(['VEHICLE','DRIVER'].includes(d.type),'INVALID_RESOURCE');if(d.fleetMode==='AGGREGATE'){const c=get(w,d.aggregateContractId,'aggregateContract');check(c.validFrom<=w.clock&&c.validTo>w.clock,'AGGREGATE_CONTRACT_EXPIRED');}return add(w,p,'resource',{...copy(d),name:text(d.name),status:'ACTIVE',capacityKg:d.type==='VEHICLE'?String(number(d.capacityKg,.001)):undefined,licenseValidTo:d.type==='DRIVER'?timestamp(d.licenseValidTo):undefined});},
+  fleet_update:(w,p,d)=>{
+    check(Object.keys(d).every(k=>['id','version','values'].includes(k)),'INVALID_RESOURCE_UPDATE_FIELDS');
+    const resource=get(w,d.id,'resource');version(resource,d);
+    check(d.values&&typeof d.values==='object'&&!Array.isArray(d.values)&&Object.keys(d.values).length,'RESOURCE_VALUES_REQUIRED');
+    const allowed=resource.type==='VEHICLE'?['name','capacityKg']:resource.type==='DRIVER'?['name','licenseValidTo']:[];
+    check(Object.keys(d.values).every(k=>allowed.includes(k)),'IMMUTABLE_RESOURCE_FIELDS');
+    check(!list(w,'reservation').some(r=>r.status==='ACTIVE'&&(r.resourceIds||[]).includes(resource.id)),'RESOURCE_RESERVED',409);
+    check(!list(w,'maintenance').some(m=>m.status==='SCHEDULED'&&m.resourceId===resource.id),'RESOURCE_MAINTENANCE',409);
+    const values=copy(d.values);
+    if(values.name!==undefined)values.name=text(values.name);
+    if(values.capacityKg!==undefined){check(['number','string'].includes(typeof values.capacityKg),'INVALID_NUMBER');values.capacityKg=String(number(values.capacityKg,.001));}
+    if(values.licenseValidTo!==undefined){values.licenseValidTo=timestamp(values.licenseValidTo);check(values.licenseValidTo>w.clock,'LICENSE_EXPIRED');}
+    return update(resource,values);
+  },
   aggregate_contract:(w,p,d)=>{check(timestamp(d.validFrom)<timestamp(d.validTo),'INVALID_INTERVAL');return add(w,p,'aggregateContract',{...copy(d),name:text(d.name),reference:text(d.reference),status:'PUBLISHED_IMMUTABLE'});},
   maintenance:(w,p,d)=>{get(w,d.resourceId,'resource');check(timestamp(d.start)<timestamp(d.end),'INVALID_INTERVAL');return add(w,p,'maintenance',{resourceId:d.resourceId,start:timestamp(d.start),end:timestamp(d.end),reason:text(d.reason),status:'SCHEDULED'});},
   maintenance_finish:(w,p,d)=>{const m=get(w,d.id,'maintenance');version(m,d);check(m.status==='SCHEDULED'&&['COMPLETED','CANCELLED'].includes(d.result),'INVALID_STATE');if(d.result==='COMPLETED')check(m.end<=w.clock,'MAINTENANCE_NOT_ENDED');return update(m,{status:d.result,reason:text(d.reason)});},

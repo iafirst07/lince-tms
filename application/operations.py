@@ -110,6 +110,9 @@ class Operations:
         plan=self.get(db,p,d.get('id'),'plan',True);self.version(plan,d);require(plan['status']=='FEASIBLE','PLAN_NOT_FEASIBLE',409)
         orders=[self.get(db,p,oid,'order',True) for oid in plan['orderIds']]
         require(all(o['status']=='RELEASED' and o['version']==plan['orderVersions'][o['id']] for o in orders),'PLAN_STALE',409)
+        for order in orders:
+            quote=self.get(db,p,order['quoteId'],'quote',True)
+            require(self.now()<moment(quote['expiresAt']) and quote['snapshotHash']==order['snapshotHash'],'QUOTE_STALE',409)
         existing={x['key'] for s in self.all(db,'shipment') if s['status']!='CANCELLED' for x in s['packages']}
         require(not existing & {x['key'] for x in plan['packages']},'ALREADY_ALLOCATED',409)
         s=self.add(db,p,'shipment',{k:copy.deepcopy(plan[k]) for k in ['orderIds','packages','weightKg','start','end','stops','cost','distanceKm']}|{'status':'PLANNED','planId':plan['id'],'planVersion':1,'assignmentId':None,'delivered':[],'lastEventAt':None,'tracking':'PLANNED','stage':'PICKUP','labelStatus':'NONE','fiscalStatus':'NOT_EVALUATED','promisedAt':max(o['windowEnd'] for o in orders),'completedAt':None})

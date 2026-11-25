@@ -16,7 +16,7 @@ class Finance:
         entry=self.get(db,p,d.get('entryId'),'ledger',True);require(entry['side']=='AP' and entry['type']=='POST','INVALID_SETTLEMENT')
         invoice=self.get(db,p,entry['invoiceId'],'invoice',True);require(invoice['status']=='POSTED_LOCAL','INVOICE_NOT_OPEN')
         require(not any(a.get('originalEntryId')==entry['id'] and a['type']=='REVERSE' and a['status']=='PENDING' for a in self.all(db,'approval')),'REVERSAL_PENDING',409)
-        amount=dec(d.get('amount'));require(amount>0,'POSITIVE_AMOUNT_REQUIRED')
+        amount=Decimal(cash(dec(d.get('amount'))));require(amount>0,'POSITIVE_AMOUNT_REQUIRED')
         committed=sum(Decimal(s['amount']) for s in self.all(db,'settlement') if s['entryId']==entry['id'])+sum(Decimal(a['amount']) for a in self.all(db,'approval') if a.get('originalEntryId')==entry['id'] and a['type']=='SETTLEMENT' and a['status']=='PENDING')
         require(committed+amount<=Decimal(entry['amount']),'SETTLEMENT_EXCEEDS_BALANCE',409)
         return self.add(db,p,'approval',{'type':'SETTLEMENT','originalEntryId':entry['id'],'invoiceId':invoice['id'],'issuerOrg':invoice['issuerOrg'],'amount':cash(amount),'reason':ident(d.get('reason')),'requestedBy':p['id'],'status':'PENDING'})

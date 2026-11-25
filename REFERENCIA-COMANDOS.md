@@ -1,6 +1,6 @@
 # Lince — referência de comandos
 
-Inventário canônico: **69 comandos com campos e formas conhecidos revisados em fonte; nenhum payload permanece apenas derivado de AST.** Isso não transforma o schema em validação de estado, relação, saldo, calendário, vigência ou autorização. O backend continua responsável por esses requisitos.
+Inventário canônico: **70 comandos com campos e formas conhecidos revisados em fonte; nenhum payload permanece apenas derivado de AST.** Isso não transforma o schema em validação de estado, relação, saldo, calendário, vigência ou autorização. O backend continua responsável por esses requisitos.
 
 Entrada comum: `POST /api/command`, `{command,payload}`, sessão local, CSRF e `Idempotency-Key` estável. Versão inteira deve ser a corrente. Dinheiro de entrada é string decimal; data/hora inclui fuso. Papéis abaixo são declarados no código, não auditoria de segurança concluída.
 
@@ -97,3 +97,7 @@ Entrada comum: `POST /api/command`, `{command,payload}`, sessão local, CSRF e `
 Cada entrada do OpenAPI inclui `schemaSources`, `uiSources` e `testSourcesRead`, com caminhos relativos e linhas da versão inventariada. Leitura de um teste não significa que ele foi executado nesta revisão. O contrato tem exemplos sintéticos de forma; IDs ilustrativos precisam ser substituídos pelos IDs obtidos na instância. O tutorial executável em [API-SIMULACAO.md](API-SIMULACAO.md) já faz essa recuperação.
 
 `receive_callback` segue método interno no Python; a inbox HTTP pública pertence ao Worker de simulação. A referência não transforma os cabeçalhos de workspace/persona em autenticação real nem presume paridade entre variantes. [Contrato canônico](application/openapi.json), documentação em `/docs/`, preparação fiscal em [FISCAL-INTEGRACAO.md](FISCAL-INTEGRACAO.md).
+
+## Edição de frota adicionada na revisão de QA
+
+`fleet_update` recebe `{id, version, values}`. Veículos permitem nome/capacidade; motoristas nome/validade da habilitação. Exige recurso sem reserva ativa nem manutenção programada. O vínculo e a identidade permanecem. Falha de versão ou guarda não altera o recurso. Fonte: `application/resource_edit.py`; testes: `application/test_resource_edit.py`.

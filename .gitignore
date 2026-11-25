@@ -13,3 +13,6 @@ node_modules/
 dist/
 outputs/
 first-access.json
+
+qa-results/
+evidencias/

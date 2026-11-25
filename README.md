@@ -53,3 +53,7 @@ A visão geral abre filas de atenção. Os módulos separam registros por tipo e
 Integrações de transportadora, ERP e órgãos públicos são simuladas. Perfis fiscais externos apenas preparam dependências; não emitem nem assinam documentos oficiais. Homologação real depende de cenário, certificado, credenciamento, fornecedor e validação competente. Baixas não movimentam dinheiro. Rota não é solver ótimo e não usa trânsito real.
 
 A revisão de permissões do backend Python permanece parcial por bloqueio da plataforma; testes funcionais não a substituem. Instalação/offline em todos os aparelhos, acessibilidade integral, segurança, carga e critérios operacionais de produção têm aceites próprios. O objetivo de navegação completa da simulação não equivale a liberação de produção.
+
+## Camada de QA
+
+[Guia de testes e massa editável](QA.md). Execute `python run_qa.py --layer all` para a bateria funcional em dados descartáveis. Front e back podem ser executados separadamente. O runner registra resultados e hashes; não instala dependências, não altera bancos servidos e não substitui a conferência no navegador.

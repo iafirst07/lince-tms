@@ -2,7 +2,7 @@
 
 Este contrato descreve o **backend Python canônico local**. Desktop e PWA do motorista usam a mesma sessão, projeções, comandos e persistência. A demonstração pública Worker é um ambiente separado de laboratório, com dados fictícios; sua existência não comprova paridade integral com os comandos locais, homologação fiscal ou segurança produtiva.
 
-Documentação navegável: `/docs/`. Contrato: `/docs/openapi.json`, também em [application/openapi.json](application/openapi.json). Inventário completo: [REFERENCIA-COMANDOS.md](REFERENCIA-COMANDOS.md). Os campos e formas conhecidos dos 69 comandos foram revisados em métodos, helpers, UI e testes. Não há payload somente derivado de AST; as regras dependentes de estado/referências continuam explicitamente no domínio.
+Documentação navegável: `/docs/`. Contrato: `/docs/openapi.json`, também em [application/openapi.json](application/openapi.json). Inventário completo: [REFERENCIA-COMANDOS.md](REFERENCIA-COMANDOS.md). Os campos e formas conhecidos dos 70 comandos foram revisados em métodos, helpers, UI e testes. Não há payload somente derivado de AST; as regras dependentes de estado/referências continuam explicitamente no domínio.
 
 ## Duas variantes, contratos distintos
 
@@ -210,7 +210,7 @@ OpenAPI 3.1.1 segue a [especificação oficial OpenAPI](https://spec.openapis.or
 
 O exemplo Python acima também foi executado por HTTP em um servidor efêmero com banco novo e contas aleatórias da massa. Passaram os percursos positivos de sessão, manifesto, comparação/cotação/pedido, preparação fiscal e motorista concluindo três volumes com replay da mesma chave. Nenhuma senha foi impressa. Esse teste não operou navegador, instalação PWA, armazenamento offline real ou runtime anterior, nem executou a categoria de revisão de permissões bloqueada. O recibo está em `evidencias/documentacao-lince-20261125/exemplo-http-resultado.json`.
 
-Schemas explícitos agora modelam os campos/formas conhecidos dos 69 comandos, incluindo variantes por kind/type/adapter. Campos condicionais ao estado não foram promovidos a obrigatórios globais. scenario_save.input e ERP.payload.reference conservam o JSON sem restrição de tipo que o backend aceita; não foram estreitados por suposição. Nenhum schema substitui invariantes de estado, relações, disponibilidade, saldo ou autorização. A atualização de um comando, rota ou contrato exige revisar/regenerar a documentação correspondente. Fontes e hashes desta unidade estão em `evidencias/documentacao-lince-20261125/`.
+Schemas explícitos agora modelam os campos/formas conhecidos dos 70 comandos, incluindo variantes por kind/type/adapter. Campos condicionais ao estado não foram promovidos a obrigatórios globais. scenario_save.input e ERP.payload.reference conservam o JSON sem restrição de tipo que o backend aceita; não foram estreitados por suposição. Nenhum schema substitui invariantes de estado, relações, disponibilidade, saldo ou autorização. A atualização de um comando, rota ou contrato exige revisar/regenerar a documentação correspondente. Fontes e hashes desta unidade estão em `evidencias/documentacao-lince-20261125/`.
 
 ## Revisão documental de payloads
 

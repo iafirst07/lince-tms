@@ -12,7 +12,7 @@ function versioned(s,o){return{id:o.id,version:s.w.objects.find(x=>x.id===o.id).
 function quoteInput(){return{originCep:'01001000',destinationCep:'01310100',packages:[{id:'PUBLIC-P1',weightKg:'2',lengthCm:'20',widthCm:'10',heightCm:'10',cargoClass:'GENERAL'},{id:'PUBLIC-P2',weightKg:'3',lengthCm:'20',widthCm:'10',heightCm:'10',cargoClass:'GENERAL'}]};}
 function planned(s){
   const p=s.p('loja.admin'),locations=s.w.objects.filter(x=>x.kind==='location'&&x.org===p.org),q=s.run('loja.admin','quote',quoteInput());
-  const order=s.run('loja.admin','order_create',{externalId:'PUBLIC-NEW-ORDER',quoteId:q.id,candidate:0,consumerCharge:'5.00',locationId:locations[1]?.id||locations[0].id,windowStart:'2026-11-26T20:00:00Z',windowEnd:'2026-11-28T20:00:00Z'});
+  const order=s.run('loja.admin','order_create',{externalId:'PUBLIC-NEW-ORDER',quoteId:q.id,candidate:0,packages:q.packages,consumerCharge:'5.00',locationId:locations[1]?.id||locations[0].id,windowStart:'2026-11-26T20:00:00Z',windowEnd:'2026-11-28T20:00:00Z'});
   s.run('loja.admin','order_release',versioned(s,order));
   const plan=s.run('loja.admin','plan',{orderIds:[order.id],originLocationId:locations[0].id,start:'2026-11-26T20:00:00Z',capacityKg:'100',speedKmh:'40'});
   assert.equal(plan.status,'FEASIBLE');const ship=s.run('loja.admin','plan_commit',versioned(s,plan));return{order,ship,q,locations};
@@ -64,7 +64,7 @@ test('two-destination nearest-next route keeps snapshot order, legs and position
   const s=scenario(),origin=s.run('loja.admin','master_create',{kind:'location',values:{name:'Origem sintética congelada',postalCode:'01001000',lat:-23.54,lon:-46.64}}),orders=[],locations=[];
   for(const[i,lat]of [-23.541,-23.56].entries()){
     const values={name:`Destino sintético ${i}`,postalCode:'01310100',lat,lon:-46.64},loc=s.run('loja.admin','master_create',{kind:'location',values}),q=s.run('loja.admin','quote',quoteInput());locations.push({loc,values});
-    const order=s.run('loja.admin','order_create',{externalId:`SNAPSHOT-ROUTE-${i}`,quoteId:q.id,candidate:0,consumerCharge:'5',locationId:loc.id,windowStart:'2026-11-26T20:00:00Z',windowEnd:'2026-11-27T20:00:00Z'});s.run('loja.admin','order_release',versioned(s,order));orders.push(order);
+    const order=s.run('loja.admin','order_create',{externalId:`SNAPSHOT-ROUTE-${i}`,quoteId:q.id,candidate:0,packages:q.packages,consumerCharge:'5',locationId:loc.id,windowStart:'2026-11-26T20:00:00Z',windowEnd:'2026-11-27T20:00:00Z'});s.run('loja.admin','order_release',versioned(s,order));orders.push(order);
   }
   const input={orderIds:orders.map(x=>x.id),originLocationId:origin.id,start:'2026-11-26T20:00:00Z',capacityKg:'100',speedKmh:'40'},before=s.run('loja.admin','plan',input);
   const{loc,values}=locations[0];s.run('loja.admin','master_update',{...versioned(s,loc),values:{...values,lat:-24.5}});

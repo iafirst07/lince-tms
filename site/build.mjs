@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const assetsDir=path.join(root,'source-assets');
 const definitions={
+ '/form-state.js':['form-state.js','text/javascript; charset=utf-8'],
  '/navigation.js':['navigation.js','text/javascript; charset=utf-8'], '/navigation.css':['navigation.css','text/css; charset=utf-8'],
  '/':['index.html','text/html; charset=utf-8'], '/app.js':['app.js','text/javascript; charset=utf-8'], '/style.css':['style.css','text/css; charset=utf-8'], '/sw.js':['sw.js','text/javascript; charset=utf-8'],
  '/driver/':['driver.html','text/html; charset=utf-8'], '/driver/driver.js':['driver.js','text/javascript; charset=utf-8'], '/driver/driver.css':['driver.css','text/css; charset=utf-8'], '/driver/driver-sw.js':['driver-sw.js','text/javascript; charset=utf-8'],
@@ -17,24 +18,24 @@ for(const [url,[name,mime]] of Object.entries(definitions)){
  let bytes=fs.readFileSync(filename);
  if(name==='openapi.json'){
   const spec=JSON.parse(bytes.toString('utf8'));
-  spec.info={...spec.info,title:'Lince â€” API pÃºblica de simulaÃ§Ã£o',description:(spec.info.description||'')+' Variante pÃºblica: dados fictÃ­cios, workspace compartilhÃ¡vel e personas de demonstraÃ§Ã£o; nÃ£o autenticaÃ§Ã£o real. O backend Python possui contrato de sessÃ£o distinto.'};
+  spec.info={...spec.info,title:'Lince — API pública de simulação',description:(spec.info.description||'')+' Variante pública: dados fictícios, workspace compartilhável e personas de demonstração; não autenticação real. O backend Python possui contrato de sessão distinto.'};
   spec.servers=[{url:'/'}];delete spec.security;
   for(const [route,item] of Object.entries(spec.paths||{}))for(const [method,op] of Object.entries(item)){
    if(!['get','post','put','patch','delete'].includes(method))continue;
    delete op.security;
-   op.parameters=[...(op.parameters||[]),{name:'X-Lince-Workspace',in:'header',required:true,schema:{type:'string',format:'uuid'},description:'Identificador do cenÃ¡rio fictÃ­cio compartilhÃ¡vel.'},{name:'X-Lince-Persona',in:'header',required:false,schema:{type:'string'},description:'ID de uma persona fictÃ­cia do cenÃ¡rio. NÃ£o Ã© autenticaÃ§Ã£o.'}];
+   op.parameters=[...(op.parameters||[]),{name:'X-Lince-Workspace',in:'header',required:true,schema:{type:'string',format:'uuid'},description:'Identificador do cenário fictício compartilhável.'},{name:'X-Lince-Persona',in:'header',required:false,schema:{type:'string'},description:'ID de uma persona fictícia do cenário. Não é autenticação.'}];
   }
-  spec.paths['/api/personas']={get:{summary:'Listar personas fictÃ­cias do cenÃ¡rio',responses:{'200':{description:'Perfis pÃºblicos de simulaÃ§Ã£o, sem senhas.'}}}};
-  spec.paths['/api/inbox']={post:{summary:'Receber evento simulado no workspace',description:'NÃ£o Ã© webhook de fornecedor real; operaÃ§Ã£o depende do contrato do simulador pÃºblico.',responses:{'200':{description:'Recebimento/projeÃ§Ã£o explicitamente simulados.'},'409':{description:'Conflito de estado ou identidade.'}}}};
-  const workspaceHeader={name:'X-Lince-Workspace',in:'header',required:true,schema:{type:'string',format:'uuid'},description:'CenÃ¡rio fictÃ­cio compartilhÃ¡vel.'};
-  const personaHeader={name:'X-Lince-Persona',in:'header',required:true,schema:{type:'string'},description:'Persona fictÃ­cia; nÃ£o autenticaÃ§Ã£o.'};
+  spec.paths['/api/personas']={get:{summary:'Listar personas fictícias do cenário',responses:{'200':{description:'Perfis públicos de simulação, sem senhas.'}}}};
+  spec.paths['/api/inbox']={post:{summary:'Receber evento simulado no workspace',description:'Não é webhook de fornecedor real; operação depende do contrato do simulador público.',responses:{'200':{description:'Recebimento/projeção explicitamente simulados.'},'409':{description:'Conflito de estado ou identidade.'}}}};
+  const workspaceHeader={name:'X-Lince-Workspace',in:'header',required:true,schema:{type:'string',format:'uuid'},description:'Cenário fictício compartilhável.'};
+  const personaHeader={name:'X-Lince-Persona',in:'header',required:true,schema:{type:'string'},description:'Persona fictícia; não autenticação.'};
   spec.paths['/api/personas'].get.parameters=[workspaceHeader];
-  spec.paths['/api/inbox'].post.parameters=[workspaceHeader,personaHeader,{name:'Idempotency-Key',in:'header',required:true,schema:{type:'string'},description:'Preservar em repetiÃ§Ã£o da mesma solicitaÃ§Ã£o.'}];
+  spec.paths['/api/inbox'].post.parameters=[workspaceHeader,personaHeader,{name:'Idempotency-Key',in:'header',required:true,schema:{type:'string'},description:'Preservar em repetição da mesma solicitação.'}];
   spec.paths['/api/inbox'].post.requestBody={required:true,content:{'application/json':{schema:{type:'object',required:['eventId','type','payload'],properties:{eventId:{type:'string'},type:{enum:['TRACKING','WMS','ERP_ACK']},payload:{type:'object',description:'TRACKING segue Command_tracking; WMS usa shipmentId/custody; ERP_ACK usa entryIds/reference.'}}}}}};
   const envelope=spec.components?.schemas?.CommandEnvelope;
   if(envelope?.oneOf){
    envelope.oneOf=envelope.oneOf.filter(x=>x.properties?.command?.const!=='migration_rollback');
-   for(const command of ['backup','simulation_reset','inbox_receive'])envelope.oneOf.push({type:'object',required:['command','payload'],properties:{command:{const:command},payload:{type:'object',description:command==='simulation_reset'?'NÃ£o apaga cenÃ¡rio: retorna409 e orienta criar outro workspace.':command==='backup'?'Exporta ZIP fictÃ­cio pelo endpoint /api/backup.':'Evento simulado: eventId, type TRACKING/WMS/ERP_ACK e payload prÃ³prio.'}}});
+   for(const command of ['backup','simulation_reset','inbox_receive'])envelope.oneOf.push({type:'object',required:['command','payload'],properties:{command:{const:command},payload:{type:'object',description:command==='simulation_reset'?'Não apaga cenário: retorna409 e orienta criar outro workspace.':command==='backup'?'Exporta ZIP fictício pelo endpoint /api/backup.':'Evento simulado: eventId, type TRACKING/WMS/ERP_ACK e payload próprio.'}}});
   }
   spec['x-python-only-commands']=['migration_rollback'];
   spec['x-runtime']='PUBLIC_SIMULATION_ONLY';bytes=Buffer.from(JSON.stringify(spec));

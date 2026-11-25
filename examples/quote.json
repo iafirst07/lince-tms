@@ -1,0 +1,8 @@
+{
+  "originCep": "01001000",
+  "destinationCep": "01310100",
+  "packages": [
+    {"id":"PET-001","weightKg":"2","lengthCm":"25","widthCm":"18","heightCm":"15","cargoClass":"GENERAL"},
+    {"id":"PET-002","weightKg":"3","lengthCm":"25","widthCm":"18","heightCm":"15","cargoClass":"GENERAL"}
+  ]
+}

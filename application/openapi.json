@@ -2,7 +2,7 @@
   "openapi": "3.1.1",
   "info": {
     "title": "Lince — API canônica local",
-    "version": "0.3.0-local",
+    "version": "0.4.0-local-qa",
     "description": "Contrato do backend Python local de dados fictícios. Desktop e PWA usam a mesma API. Não é homologação fiscal, revisão de segurança ou aceite produtivo. A demonstração pública Worker é implementação própria de laboratório: conferir sua paridade explicitamente, sem inferir que todos estes comandos estejam disponíveis."
   },
   "servers": [
@@ -5882,6 +5882,22 @@
               "command",
               "payload"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "const": "fleet_update"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/Command_fleet_update"
+              }
+            },
+            "additionalProperties": true,
+            "required": [
+              "command",
+              "payload"
+            ]
           }
         ],
         "description": "Um comando por solicitação, com campos/formas conhecidos dos69comandos revisados em fonte. O conjunto disponível depende do usuário e do ambiente. Regras de estado e demais invariantes continuam no domínio."
@@ -6905,6 +6921,74 @@
           }
         ],
         "description": "Decisão discrimina os campos necessários; disponibilidade, prazo e reserva são guardas do domínio."
+      },
+      "Command_fleet_update": {
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "values"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "values": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "capacityKg": {
+                "type": "string",
+                "pattern": "^\\d{1,10}(\\.\\d{1,6})?$"
+              },
+              "licenseValidTo": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "anyOf": [
+              {
+                "not": {
+                  "required": [
+                    "licenseValidTo"
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "required": [
+                    "capacityKg"
+                  ]
+                }
+              }
+            ],
+            "description": "VEHICLE admite name/capacityKg; DRIVER admite name/licenseValidTo. O domínio valida o tipo atual e capacidade mínima0.001. Não altera vínculo ou identidade."
+          }
+        },
+        "description": "Edita recurso sem reservaACTIVE nem manutençãoSCHEDULED. Guarda versão; preserva vínculo, userId e demais campos. Sem efeito em viagens já contratadas.",
+        "x-schema-coverage": "EXPLICIT_FIELDS_SOURCE_REVIEWED",
+        "x-runtime-validation-required": true,
+        "examples": [
+          {
+            "id": "resource-vehicle-demo",
+            "version": 1,
+            "values": {
+              "name": "Van de teste revisada",
+              "capacityKg": "120"
+            }
+          }
+        ]
       }
     }
   },
@@ -7733,6 +7817,39 @@
       "testSourcesRead": [
         "application/test_b.py:24 resources",
         "application/test_commercial_delta.py:86 test_aggregate_contract_award_and_expense_adjustments"
+      ]
+    },
+    {
+      "name": "fleet_update",
+      "rolesDeclared": [
+        "admin",
+        "planner"
+      ],
+      "directFieldsObserved": [
+        "id",
+        "version",
+        "values"
+      ],
+      "documentedFields": [
+        "id",
+        "version",
+        "values"
+      ],
+      "requiredCommon": [
+        "id",
+        "version",
+        "values"
+      ],
+      "source": "application/resource_edit.py:8",
+      "payloadCoverage": "EXPLICIT_FIELDS_SOURCE_REVIEWED",
+      "schemaSources": [
+        "application/resource_edit.py"
+      ],
+      "uiSources": [
+        "application/app.js"
+      ],
+      "testSourcesRead": [
+        "application/test_resource_edit.py"
       ]
     },
     {
@@ -9549,6 +9666,21 @@
       "path": "/sw.js",
       "file": "sw.js",
       "mediaType": "text/javascript; charset=utf-8"
+    },
+    {
+      "path": "/navigation.js",
+      "file": "navigation.js",
+      "mediaType": "text/javascript; charset=utf-8"
+    },
+    {
+      "path": "/navigation.css",
+      "file": "navigation.css",
+      "mediaType": "text/css; charset=utf-8"
+    },
+    {
+      "path": "/form-state.js",
+      "file": "form-state.js",
+      "mediaType": "text/javascript; charset=utf-8"
     }
   ],
   "x-passive-receive": {
@@ -9557,9 +9689,9 @@
     "description": "Método interno com recibo/dedup local. Nenhum endpoint HTTP de webhook genérico é declarado por server.py."
   },
   "x-documentation-limit": "Campos/formas conhecidos dos69comandos revisados em métodos/helpers/UI/testes; não é descrição exaustiva de invariantes dependentes do estado nem certificação de implementação/segurança.",
-  "x-documentation-revision": 2,
+  "x-documentation-revision": 3,
   "x-command-schema-summary": {
-    "sourceReviewed": 69,
+    "sourceReviewed": 70,
     "partialSourceDerived": 0,
     "remainingPartial": [],
     "knownUnconstrainedFields": {
