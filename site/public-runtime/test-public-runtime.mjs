@@ -20,7 +20,7 @@ function planned(s){
 function assigned(s){const setup=planned(s),carrier=s.p('carrier1.admin'),v=s.run('carrier1.admin','fleet_create',{name:'Veículo público novo',type:'VEHICLE',fleetMode:'OWN',capacityKg:'100'}),dr=s.run('carrier1.admin','fleet_create',{name:'Motorista público novo',type:'DRIVER',fleetMode:'OWN',licenseValidTo:'2031-01-01T00:00:00Z',userId:s.p('lince.motorista').id});const t=s.run('loja.admin','tender',{shipmentId:setup.ship.id,version:setup.ship.version,carriers:[carrier.org],expiresAt:'2026-11-26T20:00:00Z'});const a=s.run('carrier1.admin','offer_respond',{...versioned(s,t),decision:'ACCEPT',vehicleId:v.id,driverId:dr.id});return{...setup,assignment:a};}
 
 test('every visible desktop action has an explicit handler, including fiscal and driver contracts',()=>{
-  const source=fs.readFileSync(new URL('../application/app.js',import.meta.url),'utf8');
+  const source=fs.readFileSync(new URL('../source-assets/app.js',import.meta.url),'utf8');
   const names=[...source.matchAll(/^([a-z_]+):\[/gm),...source.matchAll(/definitions\.([a-z_]+)\s*=/g)].map(x=>x[1]);
   for(const name of new Set(names)){assert.ok(COMMANDS.includes(name),name);assert.equal(typeof handlers[name],'function',name);}
   assert.ok(COMMANDS.includes('offline_sync'));assert.ok(COMMANDS.includes('inbox_receive'));
