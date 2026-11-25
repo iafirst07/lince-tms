@@ -54,6 +54,10 @@ Integrações de transportadora, ERP e órgãos públicos são simuladas. Perfis
 
 A revisão de permissões do backend Python permanece parcial por bloqueio da plataforma; testes funcionais não a substituem. Instalação/offline em todos os aparelhos, acessibilidade integral, segurança, carga e critérios operacionais de produção têm aceites próprios. O objetivo de navegação completa da simulação não equivale a liberação de produção.
 
+## Cobertura e evolução mobile
+
+[Comparação de cobertura com Oracle OTM, SAP TM e Blue Yonder](COBERTURA-TMS.json): 27 frentes com estado, tela, API, lacuna e critério de aceite. O catálogo é uma auditoria funcional, não equivalência integral com os fornecedores. O [guia do motorista](application/driverREADME.md) explica acesso no celular, instalação PWA, roteiro de teste e limites dos futuros pacotes Android/iOS.
+
 ## Camada de QA
 
 [Guia de testes e massa editável](QA.md). Execute `python run_qa.py --layer all` para a bateria funcional em dados descartáveis. Front e back podem ser executados separadamente. O runner registra resultados e hashes; não instala dependências, não altera bancos servidos e não substitui a conferência no navegador.

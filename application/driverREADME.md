@@ -1,5 +1,44 @@
 # Lince Motorista — PWA de simulação
 
+## Acesso público pelo celular — revisão de 25/11/2026
+
+Abra **https://lince-tms.rafaelsiqueira7394.chatgpt.site/driver/** no navegador do celular. A demonstração entra como **Motorista de entregas**; use o seletor “Explorar como” para escolher **Motorista de coleta**. Não precisa de senha na demonstração pública. Abra uma viagem para ver destinos, janelas, volumes e opções de registro. Os dados são fictícios.
+
+Para testar a MESMA operação no notebook e no celular, abra o desktop, use o link **Motorista** ou **Copiar link do cenário** e abra esse link completo no celular. Preserve `?workspace=…` nos dois acessos; sem ele, uma nova sessão pode abrir outro cenário. “Novo cenário” cria outra massa e não apaga a anterior. O link público é para simulação, nunca para dados pessoais ou corporativos.
+
+**Android:** abra no Chrome e use a opção de instalar do navegador; conforme a versão, “Mais → Instalar e criar atalho → Instalar”. O botão “Instalar app” do Lince aparece quando o navegador disponibiliza a instalação. [Instrução oficial do Chrome](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=pt-BR).
+
+**iPhone:** abra no Safari e use Compartilhar → Adicionar à Tela de Início; ative “Abrir como App da Web” se a opção aparecer. [Guia da Apple](https://support.apple.com/en-az/guide/iphone/iphea86e5236/26/ios/26). A instrução foi localizada na busca oficial; a abertura direta da página retornou429 nesta revisão.
+
+O que existe hoje é uma **PWA**, com ícone e abertura independente quando instalada pelo navegador. Não foram entregues APK/AAB/IPA, nem houve publicação no Google Play/TestFlight/App Store. O teste visual feito em Edge com viewport390x844 não é teste de Android/iOS real.
+
+### Roteiro de validação mobile
+
+| Caso | Resultado esperado | Evidência atual |
+|---|---|---|
+| MOB01 Acesso direto | Motorista abre viagens atribuídas e consulta destinos/janelas | Conferido no Edge, viewport390x844; entrega e coleta |
+| MOB02 Instalação/reabertura | Ícone reabre MESMO cenário, persona e viagem | Pendente em Android e iPhone. `start_url=/driver/` não carrega workspace e o contexto usa sessionStorage; continuidade é risco a testar |
+| MOB03 Modo avião | POD/tracking ficam pendentes no aparelho, sem falsa confirmação | Lógica automatizada anterior; teste real do aparelho pendente |
+| MOB04 Fechar/reabrir/reconectar | Pendência preservada; mesma identidade sincroniza uma única prova | Teste real do aparelho pendente; não limpar dados nem reinstalar para recuperar |
+| MOB05 Câmera/galeria/teclado | Foto fictícia capturada, reduzida e enviada; formulário continua utilizável | Arquivo/capture implementados; aparelho real pendente |
+| MOB06 Desktop e celular | Mesmo workspace e entrega aparecem após atualizar | Integração hospedada conferida anteriormente em browser; dois aparelhos reais pendentes |
+| MOB07 Duas paradas | Pedido/parada/endereço distinguem volumes repetidos; confirmar uma parada não seleciona a outra | Lacuna operacional nova: PWA mostra rótulos de volume repetidos e pré-seleciona todos os não entregues; NÃO aceito como operação assistida por parada |
+| MOB08 Coleta/reversa | Origem/destino e tarefas de coleta/reversa são explícitos | Etapas e reversa existem no domínio; faltam parada de origem tipada e tarefa de reversa no motorista |
+
+Até resolver MOB07, confira manualmente os volumes no simulador e não trate a tela como execução real de rota. Não são pendências de autenticação nem prova de efeito indevido: são lacunas de usabilidade/rastreabilidade do fluxo operacional.
+
+### Estrutura para Android e iOS
+
+Primeira etapa: fechar seleção por parada/pedido, continuidade de cenário na instalação e testes reais da PWA. Em seguida, ampliar coleta/reversa, leitura de volume e comunicação conforme critérios. Só então decidir se há necessidade de pacote de loja, câmera/scanner especializado, localização em segundo plano ou push.
+
+O pacote futuro deve reutilizar contratos de API e regras do TMS; adaptadores de plataforma cuidam de câmera, armazenamento, conectividade e recursos autorizados. Um wrapper de site sozinho não resolve POD por parada, persistência ou sincronização. A stack multiplataforma será escolhida após medir os limites da PWA, sem instalar dependências ou presumir recursos de fundo.
+
+Para distribuição beta: Android precisa de build assinado e canal de testes; iOS precisa de build na toolchain Apple e TestFlight/App Store Connect. Contas, certificados, acesso ao Mac e eventual custo ainda precisam ser verificados; nenhum foi criado ou comprado. [Google Play: testes](https://support.google.com/googleplay/android-developer/answer/9845334?hl=en) · [Apple TestFlight](https://developer.apple.com/testflight/).
+
+As seções locais abaixo descrevem o backend Python, que tem acesso por usuário/senha próprio. A persona sem senha se aplica somente à demonstração pública.
+
+---
+
 Aplicativo web instalável em `/driver/`, usando a mesma API, usuários, viagens, comprovantes e banco do desktop. Não há backend falso em `localStorage`, usuário padrão ou operação real. O nome Lince e a paleta roxo/coral são uma proposta visual; não constituem aplicativo oficial ou reprodução de logotipo corporativo.
 
 ## Jornada implementada

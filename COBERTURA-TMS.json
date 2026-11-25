@@ -1,0 +1,493 @@
+{
+  "id": "BENCHMARK-MOBILE-LINCE-20261125",
+  "reviewDate": "2026-11-25",
+  "owner": "PULSO",
+  "status": "AUDITORIA_CONCLUIDA_COM_LACUNAS_PRODUTO_ABERTAS",
+  "scope": "Comparacao funcional publica e leitura/navegacao do Lincev5; sem inspecao autenticada de produtos fornecedores. Nao e prova de paridade/exaustividade.",
+  "sourceDateUnknown": true,
+  "sources": [
+    {
+      "id": "O7",
+      "class": "DOC",
+      "version": "Oracle OTM26C",
+      "url": "https://docs.oracle.com/en/cloud/saas/transportation/26c/otmol/configuration/about_the_mobile_app.htm",
+      "readScope": "App em navegador; viagens/eventos/offline, mapas e agendamentos configuraveis. Leitura publica, nao execucao autenticada."
+    },
+    {
+      "id": "O8",
+      "class": "DOC",
+      "version": "Oracle OTM26C",
+      "url": "https://docs.oracle.com/en/cloud/saas/transportation/26c/otmol/asset_mgt/about_fleet_management.htm",
+      "readScope": "Recursos, horarios de trabalho, equipamentos e atribuicoes; sem inferir pacote contratado."
+    },
+    {
+      "id": "O2R",
+      "class": "DOC",
+      "version": "Oracle OTM26C",
+      "url": "https://docs.oracle.com/en/cloud/saas/transportation/26c/otmol/planning/process_manager/process_manager/planning/build_shipments.htm",
+      "readScope": "Revalidado: embarques buy/sell, compatibilidade, itinerarios e equipamento; split condicionado."
+    },
+    {
+      "id": "O3R",
+      "class": "DOC",
+      "version": "Oracle OTM26C",
+      "url": "https://docs.oracle.com/en/cloud/saas/transportation/26c/otmol/settlement/match_rule_manager/match_rule.htm",
+      "readScope": "Revalidado: vinculo de fatura/embarque por regras; nao prova pagamento."
+    },
+    {
+      "id": "S1R",
+      "class": "DOC",
+      "version": "SAP S/4HANA Cloud Private Edition TM",
+      "url": "https://learning.sap.com/courses/applying-planning-and-execution-in-sap-s-4hana-cloud-private-edition-transportation-management/reviewing-transportation-management-capabilities_fdcde162-395d-4e71-8a6c-777e4f163390",
+      "readScope": "Revalidado: demanda, planejamento/capacidade, contratacao, execucao, acerto ERP e indicadores. Otimizacao 3D e cockpit mapa/Gantt descritos; edicoes/licencas distintas."
+    },
+    {
+      "id": "S2R",
+      "class": "DECL",
+      "version": "SAP TM; release nao informado",
+      "url": "https://www.sap.com/products/scm/transportation-logistics/features.html",
+      "readScope": "Cotacao-contrato, planejamento manual/mapa/automatico e recursos/carga. Declaracao comercial."
+    },
+    {
+      "id": "B1R",
+      "class": "DECL",
+      "version": "Blue Yonder; release nao informado",
+      "url": "https://info.blueyonder.com/transportation-management/what-is-the-blue-yonder-transportation-management-solution",
+      "readScope": "Suite de planejamento/execucao/mobile/rede; modelagem, procurement, visibility, telematica e agendamento podem ser opcionais."
+    },
+    {
+      "id": "B3",
+      "class": "DECL",
+      "version": "Blue Yonder; release nao informado",
+      "url": "https://info.blueyonder.com/transportation-management",
+      "readScope": "FAQ publica: visibilidade/ETA, docas, procurement, emissoes e conexoes com armazem/pedidos/devolucoes; catalogo nao prova licenca/API."
+    },
+    {
+      "id": "B4",
+      "class": "DECL",
+      "version": "Blue Yonder; release nao informado",
+      "url": "https://info.blueyonder.com/transportation-management/what-is-blue-yonder-transportation-mobile-user",
+      "readScope": "Tarefas mobile de motorista/doca, aceite, atualizacao e POD; sem teste de runtime."
+    },
+    {
+      "id": "A1",
+      "class": "SUPPORT_SEARCH_ONLY",
+      "version": "Apple iPhone",
+      "url": "https://support.apple.com/en-az/guide/iphone/iphea86e5236/26/ios/26",
+      "readScope": "Instrucao de adicionar app web a tela inicial apareceu em resultado oficial; abertura direta devolveu429. Nao alegar leitura integral."
+    },
+    {
+      "id": "G1",
+      "class": "SUPPORT",
+      "version": "Google Chrome Android",
+      "url": "https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=pt-BR",
+      "readScope": "Instalacao pelo Chrome: Mais, Instalar e criar atalho, Instalar. Disponibilidade depende do navegador."
+    },
+    {
+      "id": "A2",
+      "class": "DISTRIBUTION",
+      "version": "Apple TestFlight",
+      "url": "https://developer.apple.com/testflight/",
+      "readScope": "Distribuicao beta exige build enviado ao App Store Connect; teste externo tem fluxo de revisao."
+    },
+    {
+      "id": "G2",
+      "class": "DISTRIBUTION",
+      "version": "Google Play Console",
+      "url": "https://support.google.com/googleplay/android-developer/answer/9845334?hl=en",
+      "readScope": "Teste interno usa pacote valido e grupo de testadores. Nao foi criada conta nem enviado pacote."
+    }
+  ],
+  "failedSources": [
+    {
+      "url": "https://www.oracle.com/scm/logistics/transportation-management/",
+      "result": "Redirecionou SCM geral; nao usada como evidencia OTM especifica."
+    },
+    {
+      "url": "https://help.sap.com/docs/SAP_S4HANA_ON-PREMISE/e3dc5400c1cc41d1bc0ae0e7fd9aa5a2/9c27c9535f267414e10000000a174cb4.html?locale=en-US",
+      "result": "Sem texto legivel; fonte learning SAP e alternativa suficiente para recorte."
+    },
+    {
+      "url": "https://support.apple.com/en-az/guide/iphone/iphea86e5236/26/ios/26",
+      "result": "Abertura direta429; instrucao Apple apenas resultado oficial de busca."
+    }
+  ],
+  "coverage": [
+    {
+      "id": "C01",
+      "module": "M02",
+      "front": "Rede, locais, zonas e calendarios",
+      "state": "SIMULAVEL",
+      "screen": "Cadastros e tarifas",
+      "api": "master_create/master_update",
+      "benchmark": "O2R,S1R",
+      "gap": "Enderecos, janelas e calendario editaveis. Faltam lanes/rotas fixas e calendario completo de recursos.",
+      "priority": "P2",
+      "acceptance": "Rede com duas origens, hub, loja e feriado; versao antiga preservada."
+    },
+    {
+      "id": "C02",
+      "module": "M03/M04",
+      "front": "Tarifas, adicionais e cotacao",
+      "state": "PARCIAL",
+      "screen": "Cadastros/Pedidos",
+      "api": "rate_create/rate_publish/quote",
+      "benchmark": "S1R,S2R",
+      "gap": "Calculo atual usa base+peso+adicionais. Dimensoes existem, mas peso cubado/taxavel por contrato nao esta demonstrado.",
+      "priority": "P1",
+      "acceptance": "Caixa leve volumosa muda frete somente pela regra contratual versionada; recusa ambiguidade."
+    },
+    {
+      "id": "C03",
+      "module": "M05",
+      "front": "Pedidos, importacao e alteracoes",
+      "state": "SIMULAVEL",
+      "screen": "Pedidos e cotacoes",
+      "api": "order_create/import_preview/import_commit/order_change",
+      "benchmark": "O2R,S1R",
+      "gap": "Volumes, snapshot e revisoes presentes; catalogo de SKU/item comercial e pack-building nao equivalentes a volumes.",
+      "priority": "P2",
+      "acceptance": "Importacao valida/invalida e edicao apos oferta preservam versao e quantidade."
+    },
+    {
+      "id": "C04",
+      "module": "M05/M11",
+      "front": "Pedido comercial multi-origem e frete unico",
+      "state": "NAO_DEMONSTRADO",
+      "screen": "Pedidos/Financeiro; cockpit carrinho ausente",
+      "api": "Sem contrato explicito de carrinho pai/filhos",
+      "benchmark": "PROPOSTA_BR",
+      "gap": "consumerCharge/subsidio por pedido existem; nao comprova regra unica para carrinho com CD+loja/retirada e multiplos embarques.",
+      "priority": "P0",
+      "acceptance": "Um carrinho com duas origens e retirada gera uma unica cobranca esperada; custo por perna/rateio distinto, rebooking nao duplica."
+    },
+    {
+      "id": "C05",
+      "module": "M06",
+      "front": "Planejamento e replanejamento",
+      "state": "PARCIAL",
+      "screen": "Planejamento",
+      "api": "plan/plan_commit/replan",
+      "benchmark": "O2R,S1R",
+      "gap": "Heuristica vizinho mais proximo, distancia sintetica e velocidade fixa; capacidade kg, classe e janela. Sem solver viario/trafego/VRP amplo.",
+      "priority": "P1",
+      "acceptance": "Duas alternativas em malha viaria com restricoes e razao de inviabilidade; nao aceitar rota sintetica como real."
+    },
+    {
+      "id": "C06",
+      "module": "M06",
+      "front": "Cockpit mapa/Gantt e carregamento 3D",
+      "state": "NAO_IMPLEMENTADO_NO_RECORTE",
+      "screen": "Tela dedicada ausente",
+      "api": "Sem contrato dedicado",
+      "benchmark": "S1R,S2R",
+      "gap": "Lista de planos nao substitui mapa/Gantt, sequenciamento assistido, paletizacao e ocupacao volumetrica.",
+      "priority": "P2",
+      "acceptance": "Mapa/Gantt refletem mesmo plano; restricao 3D validada pelo motor, nao apenas desenho."
+    },
+    {
+      "id": "C07",
+      "module": "M07",
+      "front": "Ofertas, RFQ e contratacao",
+      "state": "PARCIAL",
+      "screen": "Planejamento",
+      "api": "tender/offer_respond/counter_accept/rfq_*",
+      "benchmark": "S1R,S2R,B1R",
+      "gap": "Fluxo sintetico funciona; RFQ basico nao equivale a sourcing plurianual por lanes, quotas e cenarios.",
+      "priority": "P2",
+      "acceptance": "Concorrencia por rota/periodo, revisoes e contrato selecionado com trilha explicavel."
+    },
+    {
+      "id": "C08",
+      "module": "M08",
+      "front": "Coleta, hub, transferencia e entrega",
+      "state": "PARCIAL",
+      "screen": "Entregas e ocorrencias/Motorista",
+      "api": "stage",
+      "benchmark": "S1R,B1R",
+      "gap": "Custodia por etapas existe; stops atuais representam destinos de pedidos. Coleta nao tem parada de origem explicitamente tipada no snapshot mobile.",
+      "priority": "P1",
+      "acceptance": "Paradas PICKUP/HUB/DELIVERY com origem/destino, volumes e janelas correspondentes."
+    },
+    {
+      "id": "C09",
+      "module": "M08/M13",
+      "front": "Docas, agendamentos e patio",
+      "state": "NAO_IMPLEMENTADO_NO_RECORTE",
+      "screen": "Agenda de docas/patio ausente",
+      "api": "Sem slot/appointment/gate contract",
+      "benchmark": "O7,B3",
+      "gap": "Calendario e janela de pedido nao sao reserva de doca ou check-in/out de patio.",
+      "priority": "P1",
+      "acceptance": "Concorrencia pelo mesmo slot, remarcacao/cancelamento e chegada atrasada sem overbooking."
+    },
+    {
+      "id": "C10",
+      "module": "M09",
+      "front": "Tracking, ocorrencias e torre operacional",
+      "state": "PARCIAL",
+      "screen": "Entregas/Visao geral",
+      "api": "tracking/claim_create/claim_resolve",
+      "benchmark": "S1R,B1R,B3",
+      "gap": "Eventos e filas existem; faltam mapa de frota ao vivo, ETA preditivo e SLA de excecao/escalacao completo.",
+      "priority": "P1",
+      "acceptance": "Evento atrasado, perda de sinal e ETA com fonte/frescor; alerta nao implica entrega."
+    },
+    {
+      "id": "C11",
+      "module": "M14",
+      "front": "Motorista: lista, destinos, volumes e foto",
+      "state": "SIMULAVEL_COM_LACUNA_P0",
+      "screen": "/driver/",
+      "api": "stage/pod/upload_pod",
+      "benchmark": "O7,B4",
+      "gap": "PWA consultada em Edge390x844; listas e foto opcional existem. Multi-parada mostra V1 repetido sem pedido e todos preselecionados.",
+      "priority": "P0",
+      "acceptance": "Selecionar parada/pedido exibe somente volumes elegiveis; nenhuma outra parada e implicitamente confirmada."
+    },
+    {
+      "id": "C12",
+      "module": "M14",
+      "front": "Offline e retomada",
+      "state": "PARCIAL",
+      "screen": "Motorista/Pendencias",
+      "api": "offline_sync para pod/tracking",
+      "benchmark": "O7",
+      "gap": "Fila IndexedDB e chaves estaveis existem; sync manual, etapas/ocorrencias online. Falta prova real de OS/camera/reabertura/instalacao.",
+      "priority": "P0",
+      "acceptance": "Modo aviao, fechar/reabrir, voltar rede e confirmar prova unica no desktop, sem limpar dados."
+    },
+    {
+      "id": "C13",
+      "module": "M14",
+      "front": "Instalacao PWA e continuidade do cenario",
+      "state": "PENDENTE_EM_APARELHO",
+      "screen": "Como instalar o app",
+      "api": "manifest e service worker",
+      "benchmark": "O7,A1,G1",
+      "gap": "manifest start_url=/driver/ sem workspace; demo-context usa sessionStorage. Reabrir instalado no mesmo cenario e risco a testar, nao defeito observado.",
+      "priority": "P0",
+      "acceptance": "Instalar/fechar/reabrir em AndroidChrome e iOSSafari mantendo UUID/persona/viagem, sem outra massa silenciosa."
+    },
+    {
+      "id": "C14",
+      "module": "M14",
+      "front": "Pacotes Android e iOS distribuidos",
+      "state": "NAO_ENTREGUE",
+      "screen": "Google Play/TestFlight nao existentes nesta entrega",
+      "api": "Sem projeto/build assinado nativo",
+      "benchmark": "A2,G2",
+      "gap": "Nenhum APK/AAB/IPA/projeto nativo demonstrado. Navegacao Edge responsiva nao e teste nativo.",
+      "priority": "P2",
+      "acceptance": "Build versionado assinado, canal beta, aparelho real, rollback e evidencias por OS."
+    },
+    {
+      "id": "C15",
+      "module": "M09/M14",
+      "front": "POD reforcado e leitura de volumes",
+      "state": "PARCIAL",
+      "screen": "Motorista/Entrega",
+      "api": "pod/upload_pod",
+      "benchmark": "O7,PROPOSTA_BR",
+      "gap": "Foto/observacao presentes. Leitor codigo, assinatura, OTP e validacao destinatario nao estao implementados no fluxo. O7 descreve eventos por parada, foto/assinatura e scanner opcional; OTP e proposta propria, nao atribuido ao fornecedor. Aplicar conforme necessidade/privacidade.",
+      "priority": "P1",
+      "acceptance": "Codigo errado/parada errada recusados; prova associa destinatario/parada/volume sem coleta excessiva."
+    },
+    {
+      "id": "C16",
+      "module": "M09/M14",
+      "front": "Reversa e tarefas de coleta do motorista",
+      "state": "PARCIAL",
+      "screen": "Desktop Devolucoes; mobile dedicado ausente",
+      "api": "return_create/return_progress existem",
+      "benchmark": "B1R",
+      "gap": "Reversa de volumes entregues e estados existe no dominio; PWA filtra viagens e nao oferece return_progress/tarefa de reversa.",
+      "priority": "P1",
+      "acceptance": "Reversa autorizada vira tarefa atribuida; motorista coleta, operacao recebe; replay nao duplica."
+    },
+    {
+      "id": "C17",
+      "module": "M09/M14",
+      "front": "Destinatario, notificacoes e reagendamento",
+      "state": "PARCIAL",
+      "screen": "Portal destinatario/preferencias ausentes",
+      "api": "notification PREPARED_NOT_SENT no Python",
+      "benchmark": "PROPOSTA_BR",
+      "gap": "Registro de notificacao nao e envio; faltam notificacao/canal, rastreio consumidor e autoatendimento.",
+      "priority": "P1",
+      "acceptance": "Mensagem mock enviada/entregue/falhou distintos; cliente ve somente sua entrega e reagenda sob regra."
+    },
+    {
+      "id": "C18",
+      "module": "M13",
+      "front": "Frota, reservas e manutencao",
+      "state": "PARCIAL",
+      "screen": "Frota e equipe",
+      "api": "fleet_create/fleet_update/maintenance",
+      "benchmark": "O8,B1R",
+      "gap": "Recursos/reservas/manutencao/despesas existem. Falta controle completo de jornada/descanso, combustivel/pneus e telemetria.",
+      "priority": "P2",
+      "acceptance": "Manutencao e conflito bloqueiam alocacao; jornada e custo efetivo conforme regra local aprovada."
+    },
+    {
+      "id": "C19",
+      "module": "M10/M11",
+      "front": "Auditoria, disputa e acerto financeiro",
+      "state": "SIMULAVEL",
+      "screen": "Financeiro",
+      "api": "invoice_*/approval_*/settlement_*",
+      "benchmark": "O3R,S1R",
+      "gap": "Faturas e rateio, tolerancia/disputa, AP/AR e estornos locais existem; sem pagamento/ERP real.",
+      "priority": "P1",
+      "acceptance": "Fatura multi-contratacao e estorno conservam centavos; conciliacao externa depende contrato."
+    },
+    {
+      "id": "C20",
+      "module": "M12",
+      "front": "Fiscal e regulatorio Brasil",
+      "state": "PREPARADO_NAO_HOMOLOGADO",
+      "screen": "Fiscal",
+      "api": "fiscal_profile_*/readiness/preflight",
+      "benchmark": "PROPOSTA_BR",
+      "gap": "Metadados/perfis versionados e envelopes DEMO; nenhum documento oficial assinado/transmitido. Aplicabilidade exige revisao competente.",
+      "priority": "GATE",
+      "acceptance": "Cenario e versoes oficiais aplicaveis, credenciamento/certificado/fornecedor e homologacao antes da producao."
+    },
+    {
+      "id": "C21",
+      "module": "M15",
+      "front": "OMS/ERP/WMS e transportadoras",
+      "state": "MOCK_TESTADO",
+      "screen": "Integracoes",
+      "api": "adapter_*/inbox/outbox",
+      "benchmark": "S1R,B1R",
+      "gap": "Adaptadores genericos e efeito UNKNOWN/consulta existem; fornecedores nao definidos, nenhum conector especifico homologado.",
+      "priority": "GATE",
+      "acceptance": "Contrato/versao, mapeamento, erros/replay e reconciliacao homologados por fornecedor selecionado."
+    },
+    {
+      "id": "C22",
+      "module": "M15",
+      "front": "Mapas, GPS e telematica",
+      "state": "MOCK_OU_LINK",
+      "screen": "Integracoes/Motorista",
+      "api": "MAPS sintetico; link externo por coordenada",
+      "benchmark": "O7,B3",
+      "gap": "Abrir mapa nao mede posicao do motorista nem trafego. Nenhum GPS continuo/roteador real demonstrado.",
+      "priority": "P1",
+      "acceptance": "Fonte autorizada, frequencia/frescor, perda de sinal e impacto bateria; sem coletar local real na demo."
+    },
+    {
+      "id": "C23",
+      "module": "M15",
+      "front": "Comunicacao, scanner e IoT",
+      "state": "NAO_HOMOLOGADO",
+      "screen": "Configuracao de canais/dispositivos ausente",
+      "api": "Sem fornecedor contratado",
+      "benchmark": "PROPOSTA_BR",
+      "gap": "Nao escolher transportadora/ERP/SMS por inferencia; manter adaptadores configuraveis e mocks.",
+      "priority": "P2",
+      "acceptance": "Contrato de canal/scanner, correlacao/retry e evidencia com massa ficticia antes de uso real."
+    },
+    {
+      "id": "C24",
+      "module": "M16",
+      "front": "Indicadores e simulacao",
+      "state": "PARCIAL",
+      "screen": "Visao geral/Cenarios",
+      "api": "GET /api/kpis: Python Engine.indicators; publico kpis(w,p). Simulacao e scenario_save conforme variante",
+      "benchmark": "S1R,B1R",
+      "gap": "KPIs explicados e18cenarios existem; faltam scorecards completos, custo-to-serve, historico/BI e modelagem de rede com solver.",
+      "priority": "P2",
+      "acceptance": "Numerador/denominador/fonte e frescor; comparar cenarios sem efeitos operacionais."
+    },
+    {
+      "id": "C25",
+      "module": "M16",
+      "front": "Emissoes e sustentabilidade",
+      "state": "NAO_IMPLEMENTADO_NO_RECORTE",
+      "screen": "Painel emissao ausente",
+      "api": "Sem fator/metodologia",
+      "benchmark": "B1R,B3",
+      "gap": "Nao confundir despesa ou distancia sintetica com inventario CO2 auditavel.",
+      "priority": "P3",
+      "acceptance": "Metodologia/fator/unidade/versao e proveniencia, sem estimativa sintetica como ganho real."
+    },
+    {
+      "id": "C26",
+      "module": "M01/M14",
+      "front": "Identidade e prontidao empresarial",
+      "state": "GATE_ABERTO",
+      "screen": "Personas publicas vs sessaoPython",
+      "api": "Contratos distintos",
+      "benchmark": "PROPOSTA_BR",
+      "gap": "Demo publica e Python sao distintos; revisao de permissoes bloqueada permanece fora desta rodada. Nao reexecutada.",
+      "priority": "GATE",
+      "acceptance": "Aceite proprio de seguranca/carga/privacidade/observabilidade e operacao, sem inferir por navegacao."
+    },
+    {
+      "id": "C27",
+      "module": "EXPANSAO",
+      "front": "Multimodal, internacional e comercio exterior",
+      "state": "FORA_DO_PRIMEIRO_RECORTE",
+      "screen": "Sem cockpit dedicado",
+      "api": "Sem contrato homologado",
+      "benchmark": "S1R,B1R",
+      "gap": "Escopo inicial e Brasil e-commerce/ultima milha; ampliar nao e necessario para provar primeira jornada e nao esta pronto.",
+      "priority": "P3",
+      "acceptance": "Contrato explicito por modal/pais e documentos antes de expandir."
+    }
+  ],
+  "mobileAccess": {
+    "url": "https://lince-tms.rafaelsiqueira7394.chatgpt.site/driver/",
+    "persona": "Motorista de entregas ou Motorista de coleta no seletor publico; sem senha empresarial",
+    "sameScenario": "Abrir link Motorista do desktop ou Copiar link do cenario e usar o mesmo workspace nos dois aparelhos. Novo cenario nao apaga anterior.",
+    "currentBuild": "PWA HTML/JS com manifest, SW e IndexedDB; sem binario Android/iOS",
+    "observed": "Edge desktop com viewport390x844: entrada direta lista2viagens de entrega; coleta lista1viagem; enderecos/janelas/mapas e formulario; sem overflow horizontal; sem escrita de entrega nesta rodada.",
+    "notObserved": [
+      "Android real",
+      "iPhone/iOSSafari real",
+      "instalacao/reabertura standalone",
+      "camera real",
+      "modoaviao/reinicio OS",
+      "GPS/background/push"
+    ]
+  },
+  "mobileRoadmap": {
+    "now": "PWA HTTPS para simulacao, instrucoes claras e mesmoscenario nos dois dispositivos.",
+    "first": "P0 confirmacao por parada/pedido e continuidade do workspace na instalacao; validar em aparelho real antes de aceite mobile.",
+    "next": "Tarefas de coleta/reversa, leitura de volume e comunicacao; gateways mock antes de fornecedor.",
+    "nativeCandidate": "Reutilizar API/domain e criar adaptadores de plataforma para camera/scanner/localizacao/notificacao somente conforme requisito. Escolher pacote multiplataforma apos medir limites da PWA; wrapper sozinho nao resolve rastreabilidade/offline.",
+    "distribution": "Android: build assinado e teste interno Play. iOS: build por toolchainApple e TestFlight. Contas/certificados/acessos e eventual custo nao presumidos."
+  },
+  "internalEvidenceNamespace": {
+    "PROPOSTA_BR": "Proposta original do Lince e requisitos humanos desta conversa: Brasil/e-commerce/ultima milha e cobranca unica; nao e fonte externa nem declaracao sobre fornecedores."
+  },
+  "limits": [
+    "Capturas/fluxos publicos dos fornecedores sao documentos ou declaracoes, nao teste dos seus runtimes.",
+    "Ausencia no recorte nao prova ausencia universal; sem acesso empresarial fornecedores.",
+    "27frentes sao mapa de cobertura orientado por documentos, nao27modulos novos aceitos nem paridade completa individual com cada fornecedor.",
+    "Nenhum dado corporativo, conta nativa, instalacao, compra, disparo ou agenda.",
+    "Regras fiscais nao revalidadas juridicamente nesta rodada."
+  ],
+  "sourceHashes": {
+    "application/app.js": "288b7350a1d5b16f52bd1adad54d9add2012fbf4591eba620e054f12df0ce766",
+    "application/navigation.js": "0306ffd1081d1a028bc3552e43e5a4d8a59458604f26f434de891e00006906aa",
+    "application/driver.js": "0200603d70330dc305860ff49b3899b93f751ebfde2013afbd0bad679858daf8",
+    "application/driver.html": "10ea5ba19bd8bc881e946aed9ea6144389b9ae5dd9744a02f99003022d40c142",
+    "application/driver.webmanifest": "8c2e617158f84fa0d8c56e874efc3835c787f3d5387cde3ca1a76a825e16ccfb",
+    "application/driver-sw.js": "5d0a7fa83fb33e72b2a5d548af200dc09420cbe309f7431053d278dadce9e6d3",
+    "application/operations.py": "77aab327e92736176bf2eab4b5814ea1ecf6f38d8d510fbefe93e4cc66f8c4b6",
+    "application/catalog.py": "048fd900c798ec6f66b9e111c89d5301cc687e0066781ce9567adcc61990b976",
+    "application/finance.py": "4683e763f1b8463cf0247ca63853fc7cdce4d07dad2c4d685ad96a56433c3e03",
+    "application/integrations.py": "811da10fd3e010130d6b39fdc635e21181180fed7f97b59bbf8abd7f9494b1ac",
+    "application/portal.py": "fb2ccbcc4a0bf95cc42e6efe8758b69b4acf19ea588db7907c886c885897ff7c",
+    "public-runtime/domain.mjs": "85957e0103095567de5d3d971406042e38d73449691254ae72cc65ca54e4afbf",
+    "public-runtime/demo-context.js": "12690a2479bda3a4e3dd4bd3afa19fe442914603bd6f3bc3ecd6b4f59707e9d3"
+  },
+  "review": {
+    "author": "cobertura_tms",
+    "scope": "Revisao distinta documental/de codigo; sem certificacao de fornecedores ou aparelhos reais",
+    "recordSha256": "9750a5082fe4303c750bd0b081526c4318f804ba5c58254860a5c86d3542606e"
+  }
+}
