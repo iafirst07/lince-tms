@@ -172,7 +172,8 @@
     }
   }
   function renderDetails(id) {
-    const trip = view?.trips.find(t => t.id === id); if (!trip) { selected = null; $('#details').hidden = true; return; }
+    document.body.classList.add("driver-trip-open");
+    const trip = view?.trips.find(t => t.id === id); if (!trip) { selected = null; document.body.classList.remove('driver-trip-open'); $('#details').hidden = true; return; }
     $('#details').hidden = false; $('#trip-title').textContent = tripName(trip); $('#trip-summary').replaceChildren(element('span', statusText[trip.status] || trip.status, 'tag'), element('p', `${trip.delivered.length} de ${trip.packages.length} volumes entregues · etapa: ${statusText[trip.stage] || 'a conferir'}`));
     const stops = $('#stops'); stops.replaceChildren();
     for (const [index, stop] of trip.stops.entries()) {
@@ -280,7 +281,7 @@
     finally { session = null; }
   };
   $('#refresh').onclick = async () => { try { await refresh(); notice('Viagens atualizadas.'); } catch (error) { notice(error.message, true); } };
-  $('#back').onclick = () => { selected = null; $('#details').hidden = true; $('#trips').scrollIntoView({behavior: 'smooth'}); };
+  $('#back').onclick = () => { selected = null; document.body.classList.remove('driver-trip-open'); $('#details').hidden = true; $('#trips').scrollIntoView({behavior: 'smooth'}); };
   document.querySelectorAll('[data-filter]').forEach(button => button.onclick = () => { filter = button.dataset.filter; document.querySelectorAll('[data-filter]').forEach(x => x.setAttribute('aria-pressed', String(x === button))); renderTrips(); });
   $('#stage').onclick = async () => {
     const button = $('#stage'); button.disabled = true;

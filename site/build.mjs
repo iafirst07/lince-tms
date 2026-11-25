@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const assetsDir=path.join(root,'source-assets');
 const definitions={
+ '/navigation.js':['navigation.js','text/javascript; charset=utf-8'], '/navigation.css':['navigation.css','text/css; charset=utf-8'],
  '/':['index.html','text/html; charset=utf-8'], '/app.js':['app.js','text/javascript; charset=utf-8'], '/style.css':['style.css','text/css; charset=utf-8'], '/sw.js':['sw.js','text/javascript; charset=utf-8'],
  '/driver/':['driver.html','text/html; charset=utf-8'], '/driver/driver.js':['driver.js','text/javascript; charset=utf-8'], '/driver/driver.css':['driver.css','text/css; charset=utf-8'], '/driver/driver-sw.js':['driver-sw.js','text/javascript; charset=utf-8'],
  '/driver/manifest.webmanifest':['driver.webmanifest','application/manifest+json'], '/driver/icon.svg':['driver-icon.svg','image/svg+xml'], '/driver/icon-192.png':['driver-icon-192.png','image/png'], '/driver/icon-512.png':['driver-icon-512.png','image/png'],

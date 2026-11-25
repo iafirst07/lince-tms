@@ -32,12 +32,12 @@
     <div id="workspace" hidden>
       <section class="welcome"><div><p class="eyebrow">BOM TRABALHO</p><h1>Suas viagens</h1><p id="actor" class="muted"></p></div><button id="logout" class="quiet">Sair</button></section>
       <div class="toolbar"><button id="refresh">Atualizar viagens</button><button id="install" hidden>Instalar app</button><a class="desktop-link" href="/">Abrir gestão no desktop</a></div>
-      <p class="small">Para instalar: use “Instalar app” no navegador compatível. No iPhone, use Compartilhar → Adicionar à Tela de Início. A instalação não exige uma loja de aplicativos.</p>
+      <details class="install-help"><summary>Como instalar o app</summary><p class="small">Para instalar: use “Instalar app” no navegador compatível. No iPhone, use Compartilhar → Adicionar à Tela de Início. A instalação não exige uma loja de aplicativos.</p></details>
       <p id="cached-at" class="small"></p>
       <nav class="tabs" aria-label="Situação das viagens"><button type="button" data-filter="active" aria-pressed="true">Em andamento</button><button type="button" data-filter="done" aria-pressed="false">Concluídas</button><button type="button" data-filter="all" aria-pressed="false">Todas</button></nav>
       <section id="trips" aria-label="Lista de viagens" class="trip-list"></section>
       <section id="details" class="panel" aria-labelledby="trip-title" hidden>
-        <button id="back" class="quiet">← Voltar às viagens</button><p class="eyebrow">VIAGEM SELECIONADA</p><h2 id="trip-title"></h2><div id="trip-summary"></div>
+        <button id="back" class="quiet">Voltar às viagens</button><p class="eyebrow">VIAGEM SELECIONADA</p><h2 id="trip-title"></h2><div id="trip-summary"></div>
         <h3>Paradas planejadas</h3><ol id="stops" class="stops"></ol>
         <p class="small">Confira o endereço com a operação quando ele não estiver informado. O app não inventa destinos nem oferece navegação para um endereço ausente.</p>
         <div id="stage-area"><h3>Conferência da carga</h3><p class="small">A próxima passagem exige conexão e confirmação de todos os volumes.</p><button id="stage" type="button"></button></div>
@@ -50,7 +50,7 @@
             <button class="primary" type="submit">Salvar registro neste aparelho</button>
           </form>
         </section>
-        <section id="tracking-area"><h3>Atualização da viagem</h3><form id="tracking-form"><label for="tracking-type">Situação observada</label><select id="tracking-type"><option value="ON_THE_WAY">A caminho</option><option value="ARRIVED">Cheguei ao destino</option><option value="DELAYED">Estou com atraso</option></select><button type="submit">Salvar atualização</button></form></section>
+        <details id="tracking-area"><summary>Atualizar situação da viagem</summary><form id="tracking-form"><label for="tracking-type">Situação observada</label><select id="tracking-type"><option value="ON_THE_WAY">A caminho</option><option value="ARRIVED">Cheguei ao destino</option><option value="DELAYED">Estou com atraso</option></select><button type="submit">Salvar atualização</button></form></details>
         <details id="claim-area"><summary>Informar avaria, extravio ou recusa</summary><p class="small">Ocorrências exigem conexão. Selecione os volumes afetados e descreva o ocorrido.</p><form id="claim-form"><fieldset><legend>Volumes afetados</legend><div id="claim-packages" class="checks"></div></fieldset><label for="claim-type">Tipo da ocorrência</label><select id="claim-type"><option value="DAMAGE">Avaria</option><option value="LOSS">Extravio</option><option value="DELAY">Atraso</option><option value="REFUSAL">Recusa</option></select><label for="claim-description">O que aconteceu?</label><textarea id="claim-description" maxlength="600" rows="3" required></textarea><button type="submit">Enviar ocorrência</button></form></details>
       </section>
       <section class="panel queue-panel" aria-labelledby="queue-title"><div class="section-heading"><div><p class="eyebrow">NESTE APARELHO</p><h2 id="queue-title">Registros pendentes <span id="queue-count">0</span></h2></div><button id="sync" class="primary">Sincronizar</button></div><div id="queue-list"></div><p class="small">Pendências são mantidas por usuário e organização. Sair não as envia nem as apaga. Use aparelho protegido; o navegador pode remover dados se o armazenamento for limpo.</p><button id="persistent" class="quiet">Solicitar armazenamento persistente</button></section>

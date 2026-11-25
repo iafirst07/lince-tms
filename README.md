@@ -25,6 +25,10 @@ Desktop local: http://127.0.0.1:8766/ · Motorista: http://127.0.0.1:8766/driver
 
 Para criar outra instância independente: `python start_lince.py --new-demo --port 8767`. O app pode ser instalado como PWA quando servido por HTTPS ou localhost; acesso pelo celular a uma instância própria exige hospedagem HTTPS apropriada. O servidor local não é exposto automaticamente na rede.
 
+## Navegação
+
+A visão geral abre filas de atenção. Os módulos separam registros por tipo e situação; a busca e a página ficam na URL. Detalhes abrem em painel lateral, com registros relacionados e ações contextualizadas. Formulários abrem sob demanda e apresentam o próximo passo ao concluir. No motorista, uma viagem fica em foco por vez.
+
 ## Camadas
 
 `application/` contém a API HTTP Python, domínio modular, SQLite, filas/integrações mock, desktop, PWA e recuperação. `public-runtime/` contém o runtime público de simulação JS. Ambos usam os contratos de interação documentados, mas sua equivalência integral não está presumida.
