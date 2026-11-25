@@ -1,0 +1,15 @@
+runtime*/
+**/runtime*/
+**/__pycache__/
+*.pyc
+*.sqlite*
+*.db
+*.zip
+*.server.lock
+.env*
+.dev.vars*
+node_modules/
+.venv/
+dist/
+outputs/
+first-access.json

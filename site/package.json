@@ -1,0 +1,1 @@
+{"name":"lince-public-simulation","private":true,"type":"module","scripts":{"build":"node build.mjs","test":"node public-runtime/test-public-runtime.mjs"}}

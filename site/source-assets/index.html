@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lince — Simulador de transportes</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<a class="skip" href="#main">Pular para o conteúdo</a>
+<section id="login-screen" class="login-screen">
+ <div class="login-brand"><div class="wordmark">lince<span>♥</span></div><p class="eyebrow">TRANSPORTES · PETLOVE</p><h1>Da cotação<br>à última entrega.</h1><p>Planeje a operação, acompanhe cada etapa e confira os resultados em um só lugar.</p><div class="demo-note">Ambiente local de demonstração · dados fictícios</div></div>
+ <form id="login-form" class="login-card"><span class="eyebrow">SEU ESPAÇO DE TRABALHO</span><h2>Bem-vindo de volta</h2><p>Entre com o acesso criado para sua organização.</p><label>Usuário<input name="username" autocomplete="username" required autofocus></label><label>Senha<input name="password" type="password" autocomplete="current-password" required></label><button type="submit" class="primary">Entrar</button><p id="login-error" role="alert"></p><small>Primeiro acesso: use as instruções locais de inicialização. Não há senha padrão.</small></form>
+</section>
+<div id="workspace" hidden>
+ <aside class="sidebar"><div class="wordmark">lince<span>♥</span></div><p class="sidebar-caption">SIMULAÇÃO DE TRANSPORTES</p><nav id="nav" aria-label="Módulos"></nav><div class="sidebar-bottom"><span class="demo-pill">DEMONSTRAÇÃO LOCAL</span><p>Nenhuma operação externa é executada.</p></div></aside>
+ <div class="shell"><header class="topbar"><div><span id="org-name"></span><span id="profile" class="muted"></span></div><div class="top-actions"><a class="quiet" href="/driver/">App motorista</a><a class="quiet" href="/docs/">Documentação</a><span id="connection">Conectado</span><button id="sync" class="quiet">Sincronizar <span id="queue-count">0</span></button><button id="logout" class="quiet">Sair</button></div></header>
+ <main id="main" tabindex="-1"><div class="page-heading"><div><span class="eyebrow" id="breadcrumb">VISÃO GERAL</span><h1 id="page-title">Sua operação, em movimento.</h1><p id="page-description"></p></div><button id="refresh" class="secondary">Atualizar</button></div>
+ <div id="notice" role="status" aria-live="polite" hidden></div>
+ <section id="metrics" class="metrics"></section>
+ <section class="work-grid"><div class="panel"><div class="panel-heading"><div><h2 id="list-title">Registros</h2><p class="muted" id="list-count"></p></div><label class="search-label"><span class="sr-only">Buscar registros</span><input id="search" type="search" placeholder="Buscar por nome ou situação"></label></div><div id="records"></div></div>
+ <section class="panel action-panel"><div class="panel-heading"><div><span class="eyebrow">PRÓXIMO PASSO</span><h2>O que você precisa fazer?</h2></div></div><label>Ação<select id="action-select"></select></label><p id="action-help" class="muted"></p><form id="action-form"></form><div id="result" aria-live="polite"></div></section></section>
+ <section id="details" class="panel details" hidden><div class="panel-heading"><h2>Detalhes do registro</h2><button id="close-details" class="quiet">Fechar</button></div><div id="detail-body"></div></section>
+ <section id="queue-panel" class="panel" hidden><h2>Envios pendentes neste dispositivo</h2><p>Registros de entrega aguardam conexão. A autorização será conferida novamente antes do envio.</p><div id="queue-list"></div></section>
+ <footer>Lince · estudo de produto para Petlove com dados fictícios. Documentos fiscais e integrações nesta versão são simulados.</footer>
+ </main></div>
+</div>
+</body></html>
