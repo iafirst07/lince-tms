@@ -39,7 +39,7 @@ class DriverTasks:
         order_id=next(iter(orders));o=self.get(db,p,order_id,'order');source=_point(o.get('destinationSnapshot'));reason=ident(d.get('reason'))
         start=moment(d.get('windowStart'));end=moment(d.get('windowEnd'));require(start<end,'INVALID_WINDOW')
         if d.get('destinationLocationId'):
-            loc=self.get(db,p,d['destinationLocationId'],'location',True);destination=_point(loc);destination_ref=loc['id']
+            loc=self.get(db,p,d['destinationLocationId'],'location',True);require(loc.get('status','ACTIVE')=='ACTIVE','MASTER_INACTIVE',409);destination=_point(loc);destination_ref=loc['id']
         else:
             stops=[x for x in s.get('pickupStops',[]) if x.get('orderId')==order_id and x.get('type')=='PICKUP']
             require(len(stops)==1,'RETURN_DESTINATION_UNKNOWN',409);destination=_point(stops[0].get('originSnapshot'));destination_ref=stops[0]['stopId']

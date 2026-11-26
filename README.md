@@ -1,3 +1,9 @@
+## Dados e cadastros da operação
+
+A operação de demonstração usa nomes e descrições profissionais, com dados já cadastrados. Consulte [Cadastros e dados](CADASTROS-E-DADOS.md) para incluir, editar, desativar e reativar locais, zonas, calendários, serviços, veículos e motoristas. Use Novo cenário para carregar a massa atualizada e preservar operações anteriores.
+
+---
+
 ## Central de operação sintética — nova implementação
 
 A central `/live/` conecta mapa esquemático, visão do motorista, API passiva, webhooks locais e documentos demonstrativos. O link **Operação ao vivo** na barra pública mantém o mesmo cenário. O contrato e os limites estão em [OPERACAO-SINTETICA.md](OPERACAO-SINTETICA.md); evidências por versão em `evidencias/operacao-sintetica-20261126/`.

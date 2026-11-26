@@ -6,17 +6,17 @@
     const main = document.querySelector('main');
     if (!main) return;
     const panel = node('details'); panel.className = 'panel'; panel.style.marginTop = '22px';
-    panel.append(node('summary', 'Simular recebimento de integração'));
-    panel.append(node('p', 'Envie um evento fictício e acompanhe a resposta do sistema. Repetir o mesmo evento deve preservar sua identidade.'));
+    panel.append(node('summary', 'Receber evento de integração'));
+    panel.append(node('p', 'Envie um evento e acompanhe a resposta do sistema. Ao repetir um envio, mantenha o mesmo identificador.'));
     const form = node('form'), grid = node('div'); grid.className = 'form-grid'; form.append(grid);
     function field(title, control) { const label = node('label', title); label.append(control); grid.append(label); return control; }
     const type = field('Tipo de evento', node('select'));
     for (const [value, text] of [['TRACKING', 'Atualização de rastreamento'], ['WMS', 'Custódia recebida do armazém'], ['ERP_ACK', 'Confirmação de conciliação']]) { const o = node('option', text); o.value = value; type.append(o); }
     const target = field('Viagem do cenário', node('select'));
     const eventId = field('Identificador do evento', node('input')); eventId.value = 'DEMO-' + crypto.randomUUID(); eventId.required = true;
-    const reference = field('Referência da integração', node('input')); reference.value = 'RECEBIMENTO-FICTICIO'; reference.required = true;
+    const reference = field('Referência da integração', node('input')); reference.value = 'RECEBIMENTO-2026'; reference.required = true;
     const refresh = node('button', 'Carregar viagens'); refresh.type = 'button'; refresh.className = 'secondary';
-    const send = node('button', 'Enviar evento simulado'); send.type = 'submit'; send.className = 'primary';
+    const send = node('button', 'Enviar evento'); send.type = 'submit'; send.className = 'primary';
     const next = node('button', 'Novo evento'); next.type = 'button'; next.className = 'secondary';
     const output = node('p'); output.setAttribute('role', 'status'); output.setAttribute('aria-live', 'polite');
     form.append(refresh, send, next, output); panel.append(form); main.append(panel);
@@ -51,7 +51,7 @@
         const response = await fetch('/api/inbox', {method: 'POST', headers: {'Content-Type': 'application/json', 'Idempotency-Key': 'inbox-' + pending.eventId}, body: JSON.stringify(pending)});
         const result = await response.json(); if (!response.ok) throw new Error(result.error?.message || result.error?.code || 'Recebimento não confirmado.');
         await load();
-        output.textContent = `Recebimento simulado: ${result.status || 'registrado'}. O registro e sua identidade foram preservados.`;
+        output.textContent = `Recebimento: ${result.status || 'registrado'}. O registro e sua identidade foram preservados.`;
         document.querySelector('#refresh')?.click();
       } catch (error) { output.textContent = error.message + ' O evento permanece preparado para conferência ou repetição da mesma solicitação.'; }
       finally { send.disabled = false; }

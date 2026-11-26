@@ -15,9 +15,10 @@ class Operations:
     def order_values(self,db,p,d):
         q=self.get(db,p,d.get('quoteId'),'quote',True);require(self.now()<moment(q['expiresAt']),'QUOTE_EXPIRED',409)
         index=d.get('candidate',0);require(isinstance(index,int) and 0<=index<len(q['candidates']),'INVALID_CANDIDATE');candidate=q['candidates'][index]
+        self.active_candidate(db,p,candidate)
         packs=packages(d.get('packages'));require(packs==q['packages'],'QUOTE_CONTENT_MISMATCH',409)
         require(not any(x['org']==p['org'] and x['externalId']==d.get('externalId') and x['status']!='CANCELLED' for x in self.all(db,'order')),'DUPLICATE_ORDER',409)
-        location=self.get(db,p,d.get('locationId'),'location',True);require(location['postalCode']==q['destinationCep'],'DESTINATION_MISMATCH')
+        location=self.active_master(db,p,d.get('locationId'),'location');require(location['postalCode']==q['destinationCep'],'DESTINATION_MISMATCH')
         require(moment(d.get('windowStart'))<moment(d.get('windowEnd')),'INVALID_WINDOW')
         cost=candidate['cost'];charge=cash(dec(d.get('consumerCharge')))
         return {'externalId':ident(d.get('externalId')),'quoteId':q['id'],'candidate':candidate,'packages':packs,'originCep':q['originCep'],'destinationCep':q['destinationCep'],'locationId':location['id'],'destinationSnapshot':delivery_snapshot(location),'windowStart':d['windowStart'],'windowEnd':d['windowEnd'],'consumerCharge':charge,'subsidy':cash(Decimal(cost)-Decimal(charge)),'snapshotHash':q['snapshotHash'],'contentVersion':1,'status':'VALIDATED','shipmentIds':[],'revisions':[]}
@@ -96,13 +97,13 @@ class Operations:
         capacity=dec(d.get('capacityKg','100'),Decimal('.001'));reasons=[]
         if weight>capacity:reasons.append('CAPACITY_EXCEEDED')
         if len({x['cargoClass'] for x in packs})>1:reasons.append('CARGO_INCOMPATIBLE')
-        start=moment(d.get('start'));speed=dec(d.get('speedKmh','40'),Decimal('1'));origin=self.get(db,p,d.get('originLocationId'),'location',True)
+        start=moment(d.get('start'));speed=dec(d.get('speedKmh','40'),Decimal('1'));origin=self.active_master(db,p,d.get('originLocationId'),'location')
         per_stop=d.get('perStopPickup',False);require(type(per_stop) is bool,'INVALID_PICKUP_MODE')
         if per_stop:require(all(o['originCep']==origin['postalCode'] for o in orders),'PICKUP_ORIGIN_MISMATCH',409)
         pos=origin;clock=start;remaining=list(orders);stops=[];distance=0.0
         def km(a,b):return math.hypot((a['lat']-b['lat'])*111,(a['lon']-b['lon'])*111*math.cos(math.radians(a['lat'])))
         while remaining:
-            selected=min(remaining,key=lambda o:(km(pos,o.get('destinationSnapshot') or self.get(db,p,o['locationId'],'location',True)),o['id']));loc=selected.get('destinationSnapshot') or self.get(db,p,selected['locationId'],'location',True);leg=km(pos,loc);distance+=leg;clock+=timedelta(hours=leg/float(speed));arrival=max(clock,moment(selected['windowStart']))
+            selected=min(remaining,key=lambda o:(km(pos,o.get('destinationSnapshot') or self.active_master(db,p,o['locationId'],'location')),o['id']));loc=selected.get('destinationSnapshot') or self.active_master(db,p,selected['locationId'],'location');leg=km(pos,loc);distance+=leg;clock+=timedelta(hours=leg/float(speed));arrival=max(clock,moment(selected['windowStart']))
             if arrival>=moment(selected['windowEnd']):reasons.append('WINDOW_INFEASIBLE:'+selected['id'])
             stops.append({'stopId':'delivery:'+selected['id'],'type':'DELIVERY','orderId':selected['id'],'orderReference':selected['externalId'],'locationId':selected['locationId'],'destination':delivery_snapshot(loc),'windowStart':selected['windowStart'],'windowEnd':selected['windowEnd'],'arrival':arrival.isoformat(),'km':round(leg,3)});clock=arrival+timedelta(minutes=5);pos=loc;remaining.remove(selected)
         pickup_stops=[{'stopId':'pickup:'+o['id'],'type':'PICKUP','orderId':o['id'],'orderReference':o['externalId'],'packageKeys':[x['key'] for x in packs if x['orderId']==o['id']],'originSnapshot':delivery_snapshot(origin),'windowStart':start.isoformat(),'windowEnd':clock.isoformat(),'source':'EXPLICIT_PLAN_ORIGIN'} for o in orders] if per_stop else []
@@ -112,6 +113,7 @@ class Operations:
     @action('admin','planner')
     def cmd_plan_commit(self,db,p,d):
         plan=self.get(db,p,d.get('id'),'plan',True);self.version(plan,d);require(plan['status']=='FEASIBLE','PLAN_NOT_FEASIBLE',409)
+        self.active_master(db,p,plan['originLocationId'],'location')
         orders=[self.get(db,p,oid,'order',True) for oid in plan['orderIds']]
         require(all(o['status']=='RELEASED' and o['version']==plan['orderVersions'][o['id']] for o in orders),'PLAN_STALE',409)
         for order in orders:

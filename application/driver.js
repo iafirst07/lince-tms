@@ -211,7 +211,7 @@
     return response.json();
   }
   const send = (command, payload, key) => api('/api/command', {method: 'POST', body: {command, payload}, key});
-  function authenticatedWorkspace() { $('#login-panel').hidden = true; $('#workspace').hidden = false; $('#actor').textContent = actor.username; }
+  function authenticatedWorkspace() { $('#login-panel').hidden = true; $('#workspace').hidden = false; $('#actor').textContent = ({'loja.admin':'Ana Ribeiro','lince.motorista':'Marcos Lima','lince.coleta':'Bruno Costa','carrier1.admin':'Carlos Nunes','carrier2.admin':'Marina Souza'})[actor.username] || actor.username; }
   async function restoreSelection(user) {
     const linked=new URLSearchParams(location.hash.slice(1)).get('trip');
     const current = selected || (linked&&view.trips.some(t=>t.id===linked)?linked:null) || await storage.selection(user);
@@ -249,16 +249,16 @@
       for(const key of task.packageKeys||[])card.append(element('p',`Volume identificado: ${key}`));
       const labels=element('button','Etiquetas QR deste retorno');labels.type='button';labels.onclick=()=>labelsFor(task.packageKeys.map(key=>({key,id:key.split(':').at(-1)})),'Etiquetas da devolução');card.append(labels);
       const read=element('button','Ler etiqueta deste retorno');read.type='button';read.disabled=task.status!=='AUTHORIZED';read.onclick=()=>{closeScanner();if(!root.LinceScanner){notice('Leitor indisponível. Atualize quando conectado.',true);return;}const user=clone(actor),taskAtStart=clone(task);scanController=root.LinceScanner.create();scanController.open({onCode(result){const current=view?.returns.find(x=>x.id===taskAtStart.id);if(!sameUser(actor,user)||!current||current.status!=='AUTHORIZED'||current.version!==taskAtStart.version||current.taskId!==taskAtStart.taskId||current.taskVersion!==taskAtStart.taskVersion)throw new Error('A tarefa de retorno mudou. Confira novamente.');if(!current.packageKeys.includes(result.packageKey))throw new Error('Esta etiqueta não pertence à tarefa de retorno.');read.textContent='Volume conferido: '+result.packageKey;notice('Volume do retorno identificado. Confirme a coleta separadamente.');},onError(error){notice(error.message||String(error),true);}});};card.append(read);
-      const button=element('button','Confirmar coleta de retorno (simulação)');button.type='button';button.disabled=!online||!!pendingTask||task.status!=='AUTHORIZED'||!task.taskId||!task.sourceSnapshot||!task.destinationSnapshot||!view.commands.includes('driver_return_collect');
-      button.onclick=async()=>{if(!confirm(`Conferiu os ${task.packageKeys.length} volumes desta tarefa de retorno? É declaração de simulação, sem prova física.`))return;await startTask('driver_return_collect',{id:task.id,version:task.version,taskId:task.taskId,packageKeys:clone(task.packageKeys),eventId:`driver-return-${uuid()}`},button);};card.append(button);list.append(card);
+      const button=element('button','Confirmar coleta de retorno');button.type='button';button.disabled=!online||!!pendingTask||task.status!=='AUTHORIZED'||!task.taskId||!task.sourceSnapshot||!task.destinationSnapshot||!view.commands.includes('driver_return_collect');
+      button.onclick=async()=>{if(!confirm(`Conferiu os ${task.packageKeys.length} volumes desta tarefa de retorno? Confira o destino e os volumes antes de registrar.`))return;await startTask('driver_return_collect',{id:task.id,version:task.version,taskId:task.taskId,packageKeys:clone(task.packageKeys),eventId:`driver-return-${uuid()}`},button);};card.append(button);list.append(card);
     }
   }
   let scanController=null;
   function closeScanner(){if(scanController){scanController.close();scanController=null;}}
   function labelsFor(packs,title){
     if(!root.LinceScanner){notice('O leitor e o gerador de etiquetas não carregaram. Atualize quando houver conexão.',true);return;}
-    const old=$('#label-dialog');if(old)old.remove();const dialog=element('dialog');dialog.id='label-dialog';dialog.setAttribute('aria-label','Etiquetas fictícias para testar o leitor');
-    dialog.append(element('h2',title),element('p','Etiquetas fictícias deste cenário. Ler seleciona o volume; não confirma coleta ou entrega.','small'));
+    const old=$('#label-dialog');if(old)old.remove();const dialog=element('dialog');dialog.id='label-dialog';dialog.setAttribute('aria-label','Etiquetas para leitura de volumes');
+    dialog.append(element('h2',title),element('p','Leia o código para selecionar o volume. A coleta ou entrega exige confirmação separada.','small'));
     for(const pack of packs){const card=element('article');card.className='label-card';const svg=new DOMParser().parseFromString(root.LinceScanner.encodeQrSvg('LINCE1:'+pack.key),'image/svg+xml').documentElement;svg.setAttribute('role','img');svg.setAttribute('aria-label','QR do volume '+pack.id);card.append(element('strong','Volume '+pack.id),element('p',pack.key),document.importNode(svg,true));dialog.append(card);}
     const print=element('button','Imprimir etiquetas');print.type='button';print.onclick=()=>root.print();const close=element('button','Fechar etiquetas');close.type='button';close.onclick=()=>dialog.close();dialog.append(print,close);document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
   }
@@ -277,7 +277,7 @@
     const trip = view?.trips.find(t => t.id === id); if (!trip) { selected = null; document.body.classList.remove('driver-trip-open'); $('#details').hidden = true; return; }
     $('#details').hidden = false; $('#trip-title').textContent = tripName(trip); $('#trip-summary').replaceChildren(element('span', statusText[trip.status] || trip.status, 'tag'), element('p', `${trip.delivered.length} de ${trip.packages.length} volumes entregues · etapa: ${statusText[trip.stage] || 'a conferir'}`));
     const labels=element('button','Mostrar etiquetas QR de teste');labels.type='button';labels.onclick=()=>labelsFor(trip.packages,'Etiquetas da viagem');$('#trip-summary').append(labels);
-    let pickupArea=$('#pickup-tasks');if(!pickupArea){pickupArea=element('section');pickupArea.id='pickup-tasks';$('#stops').before(pickupArea);}pickupArea.replaceChildren(element('h3','Coletas na origem (declaração simulada)'));
+    let pickupArea=$('#pickup-tasks');if(!pickupArea){pickupArea=element('section');pickupArea.id='pickup-tasks';$('#stops').before(pickupArea);}pickupArea.replaceChildren(element('h3','Coletas na origem'));
     if(!trip.pickupStops?.length)pickupArea.append(element('p','Origem de coleta UNKNOWN neste histórico. A passagem de custódia não comprova coleta física. Consulte a operação.','small'));
     for(const stop of trip.pickupStops||[]) {
       const item=element('article');item.append(element('strong',`Coleta do pedido ${stop.orderReference||stop.orderId} (${stop.orderId})`),element('p',pointText(stop.originSnapshot)),element('p',`Janela ${dateText(stop.windowStart)} até ${dateText(stop.windowEnd)}`));
@@ -285,7 +285,7 @@
       const done=(trip.pickupReceipts||[]).some(r=>r.stopId===stop.stopId&&r.status==='CONFIRMED'&&r.planVersion===trip.planVersion&&r.assignmentId===trip.assignmentId);
       const read=element('button','Ler etiqueta desta coleta');read.type='button';read.disabled=done||trip.status!=='ASSIGNED';read.onclick=()=>startPackageScanner(trip,{tripId:trip.id,planVersion:trip.planVersion,assignmentId:trip.assignmentId,type:'PICKUP',stopId:stop.stopId},key=>{read.textContent='Volume conferido: '+key;});item.append(read);
       const button=element('button',done?'Coleta confirmada no sistema':'Confirmar volumes desta coleta');button.type='button';button.disabled=!online||!!pendingTask||done||trip.status!=='ASSIGNED'||stop.type!=='PICKUP'||!stop.originSnapshot||!stop.packageKeys?.length||!view.commands.includes('pickup_confirm');
-      button.onclick=async()=>{if(!confirm(`Conferiu exatamente os ${stop.packageKeys.length} volumes do pedido ${stop.orderReference||stop.orderId} nesta origem? Declaração simulada, sem leitura física.`))return;await startTask('pickup_confirm',{shipmentId:trip.id,version:trip.version,planVersion:trip.planVersion,assignmentId:trip.assignmentId,stopId:stop.stopId,packageKeys:clone(stop.packageKeys),eventId:`driver-pickup-${uuid()}`},button);};item.append(button);pickupArea.append(item);
+      button.onclick=async()=>{if(!confirm(`Conferiu exatamente os ${stop.packageKeys.length} volumes do pedido ${stop.orderReference||stop.orderId} nesta origem? Confira a origem antes de confirmar.`))return;await startTask('pickup_confirm',{shipmentId:trip.id,version:trip.version,planVersion:trip.planVersion,assignmentId:trip.assignmentId,stopId:stop.stopId,packageKeys:clone(stop.packageKeys),eventId:`driver-pickup-${uuid()}`},button);};item.append(button);pickupArea.append(item);
     }
     const stops = $('#stops'); stops.replaceChildren();
     for (const [index, stop] of trip.stops.entries()) {

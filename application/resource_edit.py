@@ -10,7 +10,8 @@ class ResourceEdit:
         self.version(resource, d)
         values = d.get('values')
         require(isinstance(values, dict) and bool(values), 'INVALID_RESOURCE_VALUES')
-        allowed = {'name', 'capacityKg'} if resource['type'] == 'VEHICLE' else {'name', 'licenseValidTo'}
+        status_update='status' in values
+        allowed = {'status'} if status_update else ({'name', 'capacityKg'} if resource['type'] == 'VEHICLE' else {'name', 'licenseValidTo'})
         require(set(values) <= allowed, 'INVALID_RESOURCE_FIELD')
         if 'name' in values:
             ident(values['name'])
@@ -22,5 +23,6 @@ class ResourceEdit:
                         for x in self.all(db, 'reservation')), 'RESOURCE_RESERVED', 409)
         require(not any(x['status'] == 'SCHEDULED' and x['resourceId'] == resource['id']
                         for x in self.all(db, 'maintenance')), 'RESOURCE_MAINTENANCE', 409)
+        if status_update:return self.save(db,self.catalog_status(resource,p,d))
         resource.update(values)
         return self.save(db, resource)

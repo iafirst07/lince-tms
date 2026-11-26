@@ -22,21 +22,21 @@ export function createExploration({executeCommand,choosePersona}){
     const plan=run('loja.admin','plan',{orderIds:orders.map(o=>o.id),originLocationId:origin.id,start:at(1),capacityKg:'100',speedKmh:'40',perStopPickup:true});
     if(plan.status!=='FEASIBLE')throw Error('EXPLORATION_PLAN_INFEASIBLE');
     const shipment=run('loja.admin','plan_commit',version(plan.id));
-    const vehicle=run('carrier1.admin','fleet_create',{type:'VEHICLE',name:'Van fictícia — exploração coleta',capacityKg:'100',cargoClasses:['GENERAL']}),resource=run('carrier1.admin','fleet_create',{type:'DRIVER',name:'Motorista coleta — exploração',userId:driver.id,licenseValidTo:at(24*90)});
+    const vehicle=run('carrier1.admin','fleet_create',{type:'VEHICLE',name:'Van 07 — Coletas',capacityKg:'100',cargoClasses:['GENERAL']}),resource=run('carrier1.admin','fleet_create',{type:'DRIVER',name:'Bruno Costa',userId:driver.id,licenseValidTo:at(24*90)});
     const tender=run('loja.admin','tender',{shipmentId:shipment.id,version:object(shipment.id).version,carriers:[carrier.org],expiresAt:at(4)});
     run('carrier1.admin','offer_respond',{...version(tender.id),decision:'ACCEPT',vehicleId:vehicle.id,driverId:resource.id});
     const label=run('loja.admin','label_request',{shipmentId:shipment.id,version:object(shipment.id).version,mode:'GOOD'});
     run('loja.admin','outbox_process',version(label.id));
-    const policy=run('loja.admin','fiscal_policy',{name:'Exploração local sem emissão',scenario:'EXPLORATION_FICTITIOUS',requirements:[],mode:'DEMO_ONLY'});
+    const policy=run('loja.admin','fiscal_policy',{name:'Política de transporte urbano',scenario:'EXPLORATION_FICTITIOUS',requirements:[],mode:'DEMO_ONLY'});
     run('loja.admin','fiscal_evaluate',{shipmentId:shipment.id,version:object(shipment.id).version,policyId:policy.id,scenario:'EXPLORATION_FICTITIOUS'});
     const s=object(shipment.id),first=s.pickupStops[0];
     run('lince.coleta','pickup_confirm',{shipmentId:s.id,version:s.version,planVersion:s.planVersion,assignmentId:s.assignmentId,stopId:first.stopId,packageKeys:first.packageKeys,eventId:'EXPLORATION-PICKUP-1'});
     const returnParent=w.objects.find(s=>s.kind==='shipment'&&s.org===shipper.org&&s.driverUserId&&s.status==='DELIVERED'&&s.delivered?.length&&!w.objects.some(r=>r.kind==='return'&&r.shipmentId===s.id));
     if(!returnParent)throw Error('EXPLORATION_RETURN_PARENT_REQUIRED');
     const pack=returnParent.packages.find(p=>returnParent.delivered.includes(p.key));
-    const returned=run('loja.admin','return_create',{shipmentId:returnParent.id,packageKeys:[pack.key],reason:'Devolução fictícia para explorar tarefa de coleta'});
-    const task=run('loja.admin','return_assign',{...version(returned.id),destinationLocationId:origin.id,windowStart:at(1),windowEnd:at(8),reason:'Destino fictício explícito para exploração'});
-    const dock=run('loja.admin','dock_create',{locationId:origin.id,name:'Doca fictícia explorável',capacity:2,timezone:'America/Sao_Paulo'});
+    const returned=run('loja.admin','return_create',{shipmentId:returnParent.id,packageKeys:[pack.key],reason:'Coleta de devolução por solicitação do cliente'});
+    const task=run('loja.admin','return_assign',{...version(returned.id),destinationLocationId:origin.id,windowStart:at(1),windowEnd:at(8),reason:'Retorno ao centro de distribuição de origem'});
+    const dock=run('loja.admin','dock_create',{locationId:origin.id,name:'Doca 02 — Recebimento',capacity:2,timezone:'America/Sao_Paulo'});
     const reservation=run('loja.admin','dock_reserve',{dockId:dock.id,reference:'EXPLORAR-DOCA',start:at(1),end:at(2),units:1,shipmentId:shipment.id});
     w.exploration={version:EXPLORATION_VERSION,createdAt:now,classification:'FICTITIOUS_ONLY',realOperationAllowed:false,
       ids:{checkoutId:checkout.id,childOrderIds:checkout.orderIds,pickupShipmentId:shipment.id,pickupOrderIds:orders.map(o=>o.id),returnId:task.id,returnTaskId:task.taskId,returnParentShipmentId:returnParent.id,dockId:dock.id,reservationId:reservation.id},

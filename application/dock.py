@@ -37,6 +37,7 @@ class Dock:
     @action('admin', 'planner', 'operator')
     def cmd_dock_create(self, db, p, d):
         location = self.get(db, p, d.get('locationId'), 'location', True)
+        require(location.get('status','ACTIVE')=='ACTIVE','MASTER_INACTIVE',409)
         name, zone = ident(d.get('name')), ident(d.get('timezone'))
         require(name.strip() and zone.strip(), 'INVALID_DOCK_TEXT')
         capacity = integer(d.get('capacity'), 1, 20, 'INVALID_DOCK_CAPACITY')

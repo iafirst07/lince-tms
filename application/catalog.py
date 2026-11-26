@@ -15,10 +15,21 @@ def packages(v):
     return sorted(out,key=lambda x:x['id'])
 
 class Catalog:
+    def active_master(self,db,p,oid,kind):
+        value=self.get(db,p,oid,kind,True);require(value.get('status','ACTIVE')=='ACTIVE','MASTER_INACTIVE',409);return value
+    def active_candidate(self,db,p,candidate):
+        rate=self.get(db,p,candidate['rateId'],'rate',True)
+        self.active_master(db,p,rate['zoneId'],'zone');service=self.active_master(db,p,rate['serviceId'],'service');self.active_master(db,p,service['calendarId'],'calendar')
+    def catalog_status(self,old,p,d):
+        values=d.get('values',{});require(set(values)=={'status'} and values['status'] in ['ACTIVE','INACTIVE'],'INVALID_STATUS_UPDATE')
+        reason=ident(d.get('reason'));require(reason.strip(),'REASON_REQUIRED')
+        previous={k:copy.deepcopy(v) for k,v in old.items() if k!='history'}
+        old['history']=old.get('history',[])+[{'at':self.now().isoformat(),'actorId':p['id'],'reason':reason,'previous':previous,'status':values['status']}]
+        old['status']=values['status'];return old
     @action('admin','planner')
     def cmd_master_create(self,db,p,d):
         kind=d.get('kind');require(kind in ['zone','calendar','service','location'],'INVALID_MASTER');v=copy.deepcopy(d.get('values',{}));self.validate_master(db,p,kind,v)
-        return self.add(db,p,kind,v)
+        return self.add(db,p,kind,dict(v,status='ACTIVE'))
     def validate_master(self,db,p,kind,v,exclude=None):
         fields={'zone':{'name','from','to','priority'},'calendar':{'name','timezone','cutoff','holidays','weekdays'},'service':{'name','calendarId','transitDays','maxPackageKg','maxShipmentKg'},'location':{'name','postalCode','lat','lon'}}
         optional={'addressLine','number','complement','district','city','uf','deliveryInstructions'} if kind=='location' else set()
@@ -41,18 +52,22 @@ class Catalog:
             except (KeyError,ValueError,TypeError):raise Error('INVALID_CALENDAR')
             require(isinstance(v.get('weekdays'),list) and v['weekdays'] and set(v['weekdays'])<=set(range(7)),'INVALID_WEEKDAYS')
         elif kind=='service':
-            self.get(db,p,v.get('calendarId'),'calendar',True);require(isinstance(v.get('transitDays'),int) and 0<=v['transitDays']<=60,'INVALID_TRANSIT');dec(v.get('maxPackageKg'),Decimal('.001'));dec(v.get('maxShipmentKg'),Decimal('.001'))
+            self.active_master(db,p,v.get('calendarId'),'calendar');require(isinstance(v.get('transitDays'),int) and 0<=v['transitDays']<=60,'INVALID_TRANSIT');dec(v.get('maxPackageKg'),Decimal('.001'));dec(v.get('maxShipmentKg'),Decimal('.001'))
         else:
             v['postalCode']=cep(v.get('postalCode'))
             for k,lim in [('lat',90),('lon',180)]:require(isinstance(v.get(k),(int,float)) and abs(v[k])<=lim,'INVALID_COORDINATE')
     @action('admin','planner')
     def cmd_master_update(self,db,p,d):
         old=self.get(db,p,d.get('id'),owner=True);require(old['kind'] in ['zone','calendar','service','location'],'INVALID_MASTER');self.version(old,d)
-        vals=copy.deepcopy(d.get('values',{}));self.validate_master(db,p,old['kind'],vals,old['id']);old['history']=old.get('history',[])+[{k:v for k,v in old.items() if k!='history'}]
+        vals=copy.deepcopy(d.get('values',{}))
+        if 'status' in vals:
+            if vals.get('status')=='ACTIVE' and old['kind']=='service':self.active_master(db,p,old['calendarId'],'calendar')
+            return self.save(db,self.catalog_status(old,p,d))
+        self.validate_master(db,p,old['kind'],vals,old['id']);old['history']=old.get('history',[])+[{k:v for k,v in old.items() if k!='history'}]
         old.update(vals);return self.save(db,old)
     @action('admin','planner')
     def cmd_rate_create(self,db,p,d):
-        v=copy.deepcopy(d);self.get(db,p,v.get('zoneId'),'zone',True);self.get(db,p,v.get('serviceId'),'service',True)
+        v=copy.deepcopy(d);self.active_master(db,p,v.get('zoneId'),'zone');service=self.active_master(db,p,v.get('serviceId'),'service');self.active_master(db,p,service['calendarId'],'calendar')
         require(v.get('side') in ['BUY','SELL'],'INVALID_SIDE');carrier=ident(v.get('carrierOrg'));require(carrier==p['org'] or self.linked(db,p['org'],carrier),'RELATION_REQUIRED',403)
         require(moment(v.get('validFrom'))<moment(v.get('validTo')),'INVALID_VALIDITY')
         require(dec(v.get('minKg'))<dec(v.get('maxKg')),'INVALID_WEIGHT_BAND');dec(v.get('base'));dec(v.get('perKg'))
@@ -63,6 +78,7 @@ class Catalog:
     @action('admin','planner')
     def cmd_rate_publish(self,db,p,d):
         r=self.get(db,p,d.get('id'),'rate',True);self.version(r,d);require(r['status']=='DRAFT','PUBLISHED_IMMUTABLE',409)
+        self.active_candidate(db,p,{'rateId':r['id']})
         for other in self.all(db,'rate'):
             if other['id']==r['id'] or other['org']!=p['org'] or other['status']!='PUBLISHED':continue
             same=all(other[k]==r[k] for k in ['carrierOrg','serviceId','zoneId','side','priority'])
@@ -71,13 +87,14 @@ class Catalog:
         r['status']='PUBLISHED';r['publishedAt']=self.now().isoformat();return self.save(db,r)
     def calculate(self,db,p,d):
         destination=cep(d.get('destinationCep'));origin=cep(d.get('originCep'));packs=packages(d.get('packages'));weight=sum(dec(x['weightKg']) for x in packs);now=self.now();results=[];reasons=[]
-        services={s['id']:s for s in self.all(db,'service') if s['org']==p['org']}
-        zones={z['id']:z for z in self.all(db,'zone') if z['org']==p['org']}
+        services={s['id']:s for s in self.all(db,'service') if s['org']==p['org'] and s.get('status','ACTIVE')=='ACTIVE'}
+        zones={z['id']:z for z in self.all(db,'zone') if z['org']==p['org'] and z.get('status','ACTIVE')=='ACTIVE'}
         rates=[]
         for r in self.all(db,'rate'):
             if r['org']!=p['org'] or r['status']!='PUBLISHED' or r['side']!=d.get('side','BUY'):continue
             z=zones.get(r['zoneId']);service=services.get(r['serviceId'])
             if not z or not service or not z['from']<=destination<=z['to']:continue
+            if self.get(db,p,service['calendarId'],'calendar',True).get('status','ACTIVE')!='ACTIVE':continue
             if not moment(r['validFrom'])<=now<moment(r['validTo']):continue
             billed=Decimal(calculation(packs,r['volumetricPolicy'])['billableKg']) if 'volumetricPolicy' in r else weight
             if not dec(r['minKg'])<=billed<dec(r['maxKg']):continue
