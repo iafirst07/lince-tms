@@ -1,3 +1,14 @@
+## Revisão funcional local — 26/11/2026
+
+Coleta e entrega agora distinguem parada, pedido e volumes, sem seleção automática de todos os volumes. O fluxo de compra multi-origem mantém uma cobrança ao consumidor, separada dos custos logísticos, com rateio em centavos. Tarifas podem optar por política versionada de cubagem; o divisor6000 exibido é exemplo sintético. Planos com coleta explícita exigem recibo de cada parada antes da saída. Reversa pode virar tarefa atribuída ao motorista. Docas têm capacidade, reserva, remarcação e check-in/out simulados.
+
+Revisão distinta da fonte e integração local: ver evidências responsáveis no projeto. Testes com dados fictícios não demonstram coleta física, tarifa contratual, emissão fiscal ou prontidão empresarial. PWA não é APK/IPA. A retomada automática de workspace/persona após fechar uma sessão continua pendente: candidato excluído após falha de armazenamento negado. Preserve o link completo com `?workspace=…` para compartilhar o mesmo cenário.
+
+Links: [Desktop](https://lince-tms.rafaelsiqueira7394.chatgpt.site), [Motorista](https://lince-tms.rafaelsiqueira7394.chatgpt.site/driver/), [API](https://lince-tms.rafaelsiqueira7394.chatgpt.site/docs/). Demonstração pública usa personas fictícias e não pede senha. O backend Python local possui credenciais próprias geradas no primeiro acesso; não copiar credenciais para o código público.
+
+
+---
+
 # Lince Motorista — PWA de simulação
 
 ## Acesso público pelo celular — revisão de 25/11/2026

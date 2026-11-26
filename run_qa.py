@@ -8,6 +8,8 @@ LAYERS={
   ('edit_forms',['node','application/test_form_state.cjs'],'.'),
   ('driver_queue',['node','application/test_driver_logic.cjs'],'.')],
  'back':[
+  ('python_commerce_cubage_tasks_dock',[sys.executable,'-B','-m','unittest','test_commerce','test_volumetric','test_driver_tasks','test_dock'],'application'),
+  ('public_commerce_cubage_tasks_dock',['node','--test','public-runtime/test-commerce.mjs','public-runtime/test-volumetric.mjs','public-runtime/test-volumetric-entry.mjs','public-runtime/test-driver-tasks.mjs','public-runtime/test-dock.mjs'],'.'),
   ('python_journey',[sys.executable,'-B','-m','unittest','test_tms_journey.TmsJourneyTests'],'application'),
   ('fleet_edit',[sys.executable,'-B','-m','unittest','test_resource_edit.ResourceEditTests'],'application'),
   ('python_http',[sys.executable,'-B','-m','unittest','test_lince_http.LinceHTTP'],'application'),

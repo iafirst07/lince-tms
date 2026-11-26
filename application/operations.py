@@ -47,6 +47,7 @@ class Operations:
     @action('admin','planner')
     def cmd_order_change(self,db,p,d):
         o=self.get(db,p,d.get('id'),'order',True);self.version(o,d)
+        require(not o.get('checkoutId'),'CHECKOUT_CHILD_IMMUTABLE',409)
         require(d.get('operation') in ['EDIT','CANCEL'],'INVALID_OPERATION')
         active=[s for s in self.all(db,'shipment') if o['id'] in s['orderIds'] and s['status']!='CANCELLED']
         executed=any(s['status'] in ['IN_TRANSIT','PARTIAL','DELIVERED'] for s in active)
@@ -96,13 +97,16 @@ class Operations:
         if weight>capacity:reasons.append('CAPACITY_EXCEEDED')
         if len({x['cargoClass'] for x in packs})>1:reasons.append('CARGO_INCOMPATIBLE')
         start=moment(d.get('start'));speed=dec(d.get('speedKmh','40'),Decimal('1'));origin=self.get(db,p,d.get('originLocationId'),'location',True)
+        per_stop=d.get('perStopPickup',False);require(type(per_stop) is bool,'INVALID_PICKUP_MODE')
+        if per_stop:require(all(o['originCep']==origin['postalCode'] for o in orders),'PICKUP_ORIGIN_MISMATCH',409)
         pos=origin;clock=start;remaining=list(orders);stops=[];distance=0.0
         def km(a,b):return math.hypot((a['lat']-b['lat'])*111,(a['lon']-b['lon'])*111*math.cos(math.radians(a['lat'])))
         while remaining:
             selected=min(remaining,key=lambda o:(km(pos,o.get('destinationSnapshot') or self.get(db,p,o['locationId'],'location',True)),o['id']));loc=selected.get('destinationSnapshot') or self.get(db,p,selected['locationId'],'location',True);leg=km(pos,loc);distance+=leg;clock+=timedelta(hours=leg/float(speed));arrival=max(clock,moment(selected['windowStart']))
             if arrival>=moment(selected['windowEnd']):reasons.append('WINDOW_INFEASIBLE:'+selected['id'])
-            stops.append({'orderId':selected['id'],'orderReference':selected['externalId'],'locationId':selected['locationId'],'destination':delivery_snapshot(loc),'windowStart':selected['windowStart'],'windowEnd':selected['windowEnd'],'arrival':arrival.isoformat(),'km':round(leg,3)});clock=arrival+timedelta(minutes=5);pos=loc;remaining.remove(selected)
-        return {'orderIds':ids,'orderVersions':{o['id']:o['version'] for o in orders},'packages':packs,'weightKg':str(weight),'capacityKg':str(capacity),'start':start.isoformat(),'end':clock.isoformat(),'stops':stops,'distanceKm':round(distance,3),'reasons':reasons,'status':'INFEASIBLE' if reasons else 'FEASIBLE','cost':cash(sum(Decimal(o['candidate']['cost']) for o in orders)),'heuristic':'NEAREST_NEXT_SYNTHETIC_COORDINATES'}
+            stops.append({'stopId':'delivery:'+selected['id'],'type':'DELIVERY','orderId':selected['id'],'orderReference':selected['externalId'],'locationId':selected['locationId'],'destination':delivery_snapshot(loc),'windowStart':selected['windowStart'],'windowEnd':selected['windowEnd'],'arrival':arrival.isoformat(),'km':round(leg,3)});clock=arrival+timedelta(minutes=5);pos=loc;remaining.remove(selected)
+        pickup_stops=[{'stopId':'pickup:'+o['id'],'type':'PICKUP','orderId':o['id'],'orderReference':o['externalId'],'packageKeys':[x['key'] for x in packs if x['orderId']==o['id']],'originSnapshot':delivery_snapshot(origin),'windowStart':start.isoformat(),'windowEnd':clock.isoformat(),'source':'EXPLICIT_PLAN_ORIGIN'} for o in orders] if per_stop else []
+        return {'perStopPickup':per_stop,'originLocationId':origin['id'],'originSnapshot':delivery_snapshot(origin),'pickupStops':pickup_stops,'orderIds':ids,'orderVersions':{o['id']:o['version'] for o in orders},'packages':packs,'weightKg':str(weight),'capacityKg':str(capacity),'start':start.isoformat(),'end':clock.isoformat(),'stops':stops,'distanceKm':round(distance,3),'reasons':reasons,'status':'INFEASIBLE' if reasons else 'FEASIBLE','cost':cash(sum(Decimal(o['candidate']['cost']) for o in orders)),'heuristic':'NEAREST_NEXT_SYNTHETIC_COORDINATES'}
     @action('admin','planner')
     def cmd_plan(self,db,p,d):return self.add(db,p,'plan',self.plan_calculate(db,p,d))
     @action('admin','planner')
@@ -115,7 +119,7 @@ class Operations:
             require(self.now()<moment(quote['expiresAt']) and quote['snapshotHash']==order['snapshotHash'],'QUOTE_STALE',409)
         existing={x['key'] for s in self.all(db,'shipment') if s['status']!='CANCELLED' for x in s['packages']}
         require(not existing & {x['key'] for x in plan['packages']},'ALREADY_ALLOCATED',409)
-        s=self.add(db,p,'shipment',{k:copy.deepcopy(plan[k]) for k in ['orderIds','packages','weightKg','start','end','stops','cost','distanceKm']}|{'status':'PLANNED','planId':plan['id'],'planVersion':1,'assignmentId':None,'delivered':[],'lastEventAt':None,'tracking':'PLANNED','stage':'PICKUP','labelStatus':'NONE','fiscalStatus':'NOT_EVALUATED','promisedAt':max(o['windowEnd'] for o in orders),'completedAt':None})
+        s=self.add(db,p,'shipment',{k:copy.deepcopy(plan[k]) for k in ['orderIds','packages','weightKg','start','end','stops','cost','distanceKm']}|{k:copy.deepcopy(plan.get(k,False if k=='perStopPickup' else [] if k=='pickupStops' else None)) for k in ['perStopPickup','originLocationId','originSnapshot','pickupStops']}|{'pickupReceipts':[],'status':'PLANNED','planId':plan['id'],'planVersion':1,'assignmentId':None,'delivered':[],'lastEventAt':None,'tracking':'PLANNED','stage':'PICKUP','labelStatus':'NONE','fiscalStatus':'NOT_EVALUATED','promisedAt':max(o['windowEnd'] for o in orders),'completedAt':None})
         for o in orders:o['status']='PLANNED';o['shipmentIds'].append(s['id']);self.save(db,o)
         plan.update(status='COMMITTED',shipmentId=s['id']);self.save(db,plan);return s
     @action('admin','planner')
@@ -259,6 +263,8 @@ class Operations:
         sequence=['PICKUP','HUB','TRANSFER','LAST_MILE','DELIVERY'];stage=d.get('stage');require(stage in sequence,'INVALID_STAGE')
         keys=d.get('packageKeys');expected={x['key'] for x in s['packages']}
         require(isinstance(keys,list) and len(keys)==len(set(keys)) and set(keys)==expected,'CUSTODY_VOLUMES_MISMATCH')
+        if stage=='PICKUP' and s.get('perStopPickup'):
+            require(bool(s.get('pickupStops')) and all(any(r.get('status')=='CONFIRMED' and r.get('stopId')==stop['stopId'] and r.get('planVersion')==s['planVersion'] and r.get('assignmentId')==s.get('assignmentId') and set(r.get('packageKeys',[]))==set(stop['packageKeys']) for r in s.get('pickupReceipts',[])) for stop in s['pickupStops']),'PICKUP_RECEIPTS_REQUIRED',409)
         if s['status']=='ASSIGNED':require(s.get('labelStatus')=='READY' and s.get('fiscalStatus') in ['DEMO_AUTHORIZED','DEMO_NOT_REQUIRED'],'DISPATCH_BLOCKED');require(stage=='PICKUP','PICKUP_REQUIRED');s['status']='IN_TRANSIT'
         else:require(s['status'] in ['IN_TRANSIT','PARTIAL'] and sequence.index(stage)==sequence.index(s['stage'])+1,'INVALID_STAGE_TRANSITION')
         s.setdefault('custody',[]).append({'stage':stage,'packageKeys':sorted(keys),'quantity':len(keys),'actor':p['id'],'at':self.now().isoformat()})
@@ -305,4 +311,5 @@ class Operations:
     @action('admin','operator','driver')
     def cmd_return_progress(self,db,p,d):
         r=self.get(db,p,d.get('id'),'return');self.version(r,d);target=d.get('status');trans={'AUTHORIZED':'COLLECTED','COLLECTED':'RECEIVED','RECEIVED':'CLOSED'};require(trans.get(r['status'])==target,'INVALID_TRANSITION')
+        require(not (r.get('taskId') and target=='COLLECTED'),'RETURN_TASK_COLLECTION_REQUIRED',409)
         require(p['org']==(r['carrierOrg'] if target=='COLLECTED' else r['org']),'ROLE_SCOPE',403);r['history'].append({'from':r['status'],'to':target,'at':self.now().isoformat(),'user':p['id']});r['status']=target;return self.save(db,r)

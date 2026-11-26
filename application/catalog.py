@@ -1,6 +1,7 @@
+from volumetric import validate_policy,calculation
 import copy,re
 from datetime import timedelta,date,time
-from decimal import Decimal
+from decimal import Decimal,localcontext
 from zoneinfo import ZoneInfo,ZoneInfoNotFoundError
 from core import action,require,Error,ident,dec,cash,moment,sha
 
@@ -57,6 +58,7 @@ class Catalog:
         require(dec(v.get('minKg'))<dec(v.get('maxKg')),'INVALID_WEIGHT_BAND');dec(v.get('base'));dec(v.get('perKg'))
         require(isinstance(v.get('priority'),int),'INVALID_PRIORITY')
         for a in v.get('additions',[]):ident(a.get('name'));require(a.get('type') in ['FIXED','PERCENT'],'INVALID_ADDITION');dec(a.get('value'))
+        if 'volumetricPolicy' in v:validate_policy(v['volumetricPolicy'])
         v['status']='DRAFT';return self.add(db,p,'rate',v)
     @action('admin','planner')
     def cmd_rate_publish(self,db,p,d):
@@ -76,7 +78,9 @@ class Catalog:
             if r['org']!=p['org'] or r['status']!='PUBLISHED' or r['side']!=d.get('side','BUY'):continue
             z=zones.get(r['zoneId']);service=services.get(r['serviceId'])
             if not z or not service or not z['from']<=destination<=z['to']:continue
-            if not moment(r['validFrom'])<=now<moment(r['validTo']) or not dec(r['minKg'])<=weight<dec(r['maxKg']):continue
+            if not moment(r['validFrom'])<=now<moment(r['validTo']):continue
+            billed=Decimal(calculation(packs,r['volumetricPolicy'])['billableKg']) if 'volumetricPolicy' in r else weight
+            if not dec(r['minKg'])<=billed<dec(r['maxKg']):continue
             if r['carrierOrg']!=p['org'] and not self.linked(db,p['org'],r['carrierOrg']):continue
             if weight>dec(service['maxShipmentKg']) or any(dec(x['weightKg'])>dec(service['maxPackageKg']) for x in packs):reasons.append({'rate':r['id'],'reason':'CAPACITY'});continue
             rates.append((r,z,service))
@@ -97,9 +101,14 @@ class Catalog:
             for _ in range(s['transitDays']):
                 day+=timedelta(days=1)
                 while not business(day):day+=timedelta(days=1)
-            raw=dec(r['base'])+weight*dec(r['perKg']);lines=[{'name':'BASE','amount':cash(dec(r['base']))},{'name':'WEIGHT','amount':cash(weight*dec(r['perKg']))}]
-            for a in r.get('additions',[]):lines.append({'name':a['name'],'amount':cash(dec(a['value']) if a['type']=='FIXED' else raw*dec(a['value'])/100)})
-            results.append({'carrierOrg':r['carrierOrg'],'serviceId':s['id'],'rateId':r['id'],'rateVersion':r['version'],'cost':cash(sum(Decimal(x['amount']) for x in lines)),'currency':'BRL','lines':lines,'pickup':pickup.isoformat(),'delivery':day.isoformat(),'calendarSnapshot':cal,'rateSnapshot':r})
+            memory=calculation(packs,r['volumetricPolicy']) if 'volumetricPolicy' in r else None
+            billed=Decimal(memory['billableKg']) if memory else weight
+            with localcontext() as context:
+                context.prec=100
+                raw=dec(r['base'])+billed*dec(r['perKg']);lines=[{'name':'BASE','amount':cash(dec(r['base']))},{'name':'WEIGHT','amount':cash(billed*dec(r['perKg']))}]
+                for a in r.get('additions',[]):lines.append({'name':a['name'],'amount':cash(dec(a['value']) if a['type']=='FIXED' else raw*dec(a['value'])/100)})
+                results.append({'carrierOrg':r['carrierOrg'],'serviceId':s['id'],'rateId':r['id'],'rateVersion':r['version'],'cost':cash(sum(Decimal(x['amount']) for x in lines)),'currency':'BRL','lines':lines,'pickup':pickup.isoformat(),'delivery':day.isoformat(),'calendarSnapshot':cal,'rateSnapshot':r})
+            if memory:results[-1]['weightCalculation']={**memory,'rateId':r['id'],'rateVersion':r['version']}
         require(results,'NO_ELIGIBLE_COVERAGE')
         return {'originCep':origin,'destinationCep':destination,'packages':packs,'weightKg':str(weight),'candidates':sorted(results,key=lambda r:Decimal(r['cost'])),'reasons':reasons,'expiresAt':(now+timedelta(minutes=15)).isoformat(),'snapshotHash':sha([origin,destination,packs])}
     @action('admin','planner','operator')

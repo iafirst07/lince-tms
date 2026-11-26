@@ -1,63 +1,94 @@
-# Lince — simulador de transportes
+## Revisão funcional local — 26/11/2026
 
-Estudo funcional de TMS para o contexto Petlove: desktop para operação e PWA para o motorista, com paleta candidata roxo/coral. Todos os estabelecimentos, endereços, usuários, pedidos, documentos e imagens de demonstração são fictícios.
+Coleta e entrega agora distinguem parada, pedido e volumes, sem seleção automática de todos os volumes. O fluxo de compra multi-origem mantém uma cobrança ao consumidor, separada dos custos logísticos, com rateio em centavos. Tarifas podem optar por política versionada de cubagem; o divisor6000 exibido é exemplo sintético. Planos com coleta explícita exigem recibo de cada parada antes da saída. Reversa pode virar tarefa atribuída ao motorista. Docas têm capacidade, reserva, remarcação e check-in/out simulados.
 
-## Acessos
+Revisão distinta da fonte e integração local: ver evidências responsáveis no projeto. Testes com dados fictícios não demonstram coleta física, tarifa contratual, emissão fiscal ou prontidão empresarial. PWA não é APK/IPA. A retomada automática de workspace/persona após fechar uma sessão continua pendente: candidato excluído após falha de armazenamento negado. Preserve o link completo com `?workspace=…` para compartilhar o mesmo cenário.
 
-- Demonstração pública: https://lince-tms.rafaelsiqueira7394.chatgpt.site
-- App do motorista: https://lince-tms.rafaelsiqueira7394.chatgpt.site/driver/
-- Documentação de API: https://lince-tms.rafaelsiqueira7394.chatgpt.site/docs/
+Links: [Desktop](https://lince-tms.rafaelsiqueira7394.chatgpt.site), [Motorista](https://lince-tms.rafaelsiqueira7394.chatgpt.site/driver/), [API](https://lince-tms.rafaelsiqueira7394.chatgpt.site/docs/). Demonstração pública usa personas fictícias e não pede senha. O backend Python local possui credenciais próprias geradas no primeiro acesso; não copiar credenciais para o código público.
 
-O runtime público é um motor de **simulação** HTTP separado, com personas fictícias e armazenamento próprio; não é autenticação produtiva nem homologação do backend Python. Um workspace compartilhável permite explorar o mesmo cenário no desktop e no motorista. Não insira informações reais nesse ambiente público.
 
-## Executar o backend Python canônico no notebook
+---
 
-Requer Python 3.12+ e as dependências do arquivo requirements. Use um ambiente virtual de sua escolha:
+## Benchmark e estrutura mobile revisados — 25/11/2026
 
-```sh
-python -m pip install -r requirements.txt
-python start_lince.py
-```
+Rodada atual compara27frentes do Lince com documentação pública atual de OracleOTM26C, SAPTM e BlueYonder;13fontes qualificadas em COBERTURA-TMS.json, revisão distinta em evidencias/benchmark-mobile-20261125/revisao/. Auditoria encerrada no recorte, produto permanece com lacunas abertas. Sem acesso autenticado aos runtimes dos fornecedores nem alegação de paridade completa.
 
-Na primeira execução, um diretório novo de simulação é preparado com 18 cenários,11 pedidos,7 viagens e7 contas. As senhas são geradas aleatoriamente e ficam somente em `runtime-local/first-access.json`, ignorado pelo Git. Consulte esse arquivo local para entrar. Execuções posteriores reutilizam a base; o inicializador não apaga nem reseta bancos existentes.
+PWA pública /driver/ conferida no Edge390x844, com viagens de entrega e coleta, destinos/janelas/volumes e instruções de instalação. Não foram criados binários Android/iOS nem testados aparelhos reais. PrioridadesP0: confirmação por parada/pedido (rótulos de volume repetidos/pré-seleção observados), validar continuidade de cenário na instalação/retomada e regra de freteúnico em carrinho multi-origem ainda não demonstrada. Demais critérios por frente no JSON; roteiro mobile e distribuição candidata em application/driverREADME.md.
 
-Desktop local: http://127.0.0.1:8766/ · Motorista: http://127.0.0.1:8766/driver/ · APIs: http://127.0.0.1:8766/docs/
+Nenhum runtime, banco servido, entrega ou autorização produtiva alterados; somente documentos/registro. Backups/hash-base/readback preservados. Aceites anteriores não promovidos; validação humana e homologações externas permanecem. Owner PULSO nesta unidade; execução independente suficiente não repetida. Próxima ação elegível: correção delimitada dosP0 com fonte/contrato e prova nova; aparelho real necessário para aceite mobile, sem alegar compatibilidade por viewport.
 
-Para criar outra instância independente: `python start_lince.py --new-demo --port 8767`. O app pode ser instalado como PWA quando servido por HTTPS ou localhost; acesso pelo celular a uma instância própria exige hospedagem HTTPS apropriada. O servidor local não é exposto automaticamente na rede.
+---
 
-## Navegação
+## QA funcional concluído — versão pública 5, 25/11/2026
 
-A visão geral abre filas de atenção. Os módulos separam registros por tipo e situação; a busca e a página ficam na URL. Detalhes abrem em painel lateral, com registros relacionados e ações contextualizadas. Formulários abrem sob demanda e apresentam o próximo passo ao concluir. No motorista, uma viagem fica em foco por vez.
+Revisão de navegação e jornadas TMS concluída no recorte fictício autorizado. Camada repetível em run_qa.py, QA.md e examples/: 72 casos nomeados em sete suites, todos aprovados na combinação do runner final com reteste do frontend afetado. Evidências compiladas e de navegador são separadas, sem somar repetições: quatro controles POST do bundle, 19 assets; baseline de 77 combinações perfil/tela e 60 renderizações de formulário (58 comandos). Revisão distinta dos deltas Python, JS e formulário concluída, preservando falhas e ciclos anteriores.
 
-## Camadas
+Corrigidos cancelamento/oferta que reativava entrega, cotação vencida no planejamento, liquidação arredondada a zero, preservação de edições/candidatos e validação de coordenadas/CEP/volumes. Cadastros de organizações/usuários consultáveis, edição de frota versionada, calendários editáveis e escolhas financeiras contextualizadas. Navegador público confirmou escrita/leitura de dados fictícios e detalhe móvel390x844 sem overflow horizontal. Cenários e bancos anteriores preservados.
 
-`application/` contém a API HTTP Python, domínio modular, SQLite, filas/integrações mock, desktop, PWA e recuperação. `public-runtime/` contém o runtime público de simulação JS. Ambos usam os contratos de interação documentados, mas sua equivalência integral não está presumida.
+Site: https://lince-tms.rafaelsiqueira7394.chatgpt.site ; GitHub commit397e1b8af880a430b1558952663c9c7a3b5d81d6. Fonte/site e provas: evidencias/qa-tms-20261125/resultado-final.json. Pronto para simulação e avaliação humana; aceite produtivo, fiscal/integrações reais e segurança empresarial permanecem abertos. Sem nova agenda, instalação ou operação corporativa. Owner PULSO; consumo/custo desconhecidos. Próxima ação: avaliação humana ou lacuna material nova, sem repetir baterias suficientes.
 
-- Catálogos, calendário, tarifas versionadas e cotação multitransportadora.
-- Pedidos/importação, planejamento/rota heurística, replanejamento, RFQ/ofertas e reservas.
-- Custódia, tracking, tentativas/POD com foto, ocorrências, reversa e fila offline.
-- Conferência, rateio, disputa, aprovação, AP/AR, baixas/estornos locais e despesas.
-- Frota, agregados, manutenção, preparação fiscal, indicadores e simulação.
-- Integração ativa por outbox/mocks e recebimento passivo explicitamente documentado.
+---
 
-## Documentos
+## Navegação revisada — versão pública 4, 25/11/2026
 
-- [Roteiro dos cenários](SIMULACAO.md)
-- [API e exemplos](API-SIMULACAO.md)
-- [Catálogo de comandos](REFERENCIA-COMANDOS.md)
-- [Preparação fiscal](FISCAL-INTEGRACAO.md)
-- [App motorista e offline](application/driverREADME.md)
+Pedido humano direto de Rafael: navegar e melhorar a navegação. PULSO percorreu o site e corrigiu consulta, menus, filtros, detalhes e formulários: prioridades na visão geral, listas por tipo/situação, detalhes laterais, ações contextualizadas, continuidade e retomada por URL. Motorista foca uma viagem por vez. Valores/datas legíveis; planejamento oferece somente pedidos liberados.
 
-## Limites de aceite
+Site público atualizado: https://lince-tms.rafaelsiqueira7394.chatgpt.site, versão4/source bacc19557f3b703c751630d6475af0c00a44ea94. GitHub público atualizado, commit488218c1f34a905ab21b3fad357d49adce173826. Registro e limites: evidencias/navegacao-lince-20261125/resultado.json. UI hospedada desktop e viewport390x844 conferida; liberação de pedido fictício1001 confirmada com próximo passo; rascunho/retomada corrigidos após achado real. Testes23runtime/9lógica motorista/3HTTPPython e18assets compilados. Não é auditoria independente integral de UX nem aceite produtivo.
 
-Integrações de transportadora, ERP e órgãos públicos são simuladas. Perfis fiscais externos apenas preparam dependências; não emitem nem assinam documentos oficiais. Homologação real depende de cenário, certificado, credenciamento, fornecedor e validação competente. Baixas não movimentam dinheiro. Rota não é solver ótimo e não usa trânsito real.
+Nenhum reset de banco ou cenário salvo. Alteração funcional observada apenas em pedido da massa fictícia. Fiscal/integradores reais, segurança/permissões e aceites anteriores continuam com seus limites; categoria de auditoria bloqueada não repetida. Nenhuma agenda nova. Próxima ação: avaliação humana da navegação e correção de lacuna material observada, sem reabrir baterias suficientes por rotina. Owner desta unidade PULSO; aceite humano pendente, consumo desconhecido.
 
-A revisão de permissões do backend Python permanece parcial por bloqueio da plataforma; testes funcionais não a substituem. Instalação/offline em todos os aparelhos, acessibilidade integral, segurança, carga e critérios operacionais de produção têm aceites próprios. O objetivo de navegação completa da simulação não equivale a liberação de produção.
+---
 
-## Cobertura e evolução mobile
+## Lince publicado — decisão vigente em 25/11/2026
 
-[Comparação de cobertura com Oracle OTM, SAP TM e Blue Yonder](COBERTURA-TMS.json): 27 frentes com estado, tela, API, lacuna e critério de aceite. O catálogo é uma auditoria funcional, não equivalência integral com os fornecedores. O [guia do motorista](application/driverREADME.md) explica acesso no celular, instalação PWA, roteiro de teste e limites dos futuros pacotes Android/iOS.
+Rafael confirmou a conta pessoal **iafirst07**, código público e demonstração pública com dados fictícios. Essa decisão substitui, somente neste pacote independente, as antigas vedações de publicação e a pendência de escolha da conta preservadas abaixo. Nome de trabalho Lince, com paleta candidata roxo/coral inspirada na referência pública da Petlove; não houve importação de dados corporativos.
 
-## Camada de QA
+**SIMULACAO_PUBLICADA_COM_GATES_PRODUTIVOS_ABERTOS.** [Desktop](https://lince-tms.rafaelsiqueira7394.chatgpt.site), [motorista](https://lince-tms.rafaelsiqueira7394.chatgpt.site/driver/), [API](https://lince-tms.rafaelsiqueira7394.chatgpt.site/docs/) e [GitHub público](https://github.com/iafirst07/lince-tms). Repositório85arquivos, commitb8a64d8a099048a7fe9cd18a20f21902d7d25fd8; Sitev2/sourcef933f3164614a33ce44a781a50cc325c1959d622. Referência responsável: evidencias/publicacao-lince-20261125/publicacao-final.json.
 
-[Guia de testes e massa editável](QA.md). Execute `python run_qa.py --layer all` para a bateria funcional em dados descartáveis. Front e back podem ser executados separadamente. O runner registra resultados e hashes; não instala dependências, não altera bancos servidos e não substitui a conferência no navegador.
+Backend Python e runtime público JS são distintos. Foram acrescentados app motorista/PWA, destinos imutáveis, preparação fiscal por versões, biblioteca18cenários e documentação69comandos canônicos/71na variante pública. A publicação tem APIHTTP e persistênciaD1 reais para a simulação; personas são públicas, não autenticação empresarial. TesteUI hospedado confirmou entrega fictícia no motorista e atualização no desktop, além de reconciliação de resposta perdida em cenário novo. Não comprova todos os comandos/aparelhos nem equivalência integral Python/JS.
+
+Falhas encontradas foram preservadas:403 em cliente automático, sem reprodução no Edge;503 de comando por export ausente do bundle, corrigido e retestado; respostas mock omitidas no cenárioUNKNOWN, corrigidas. Registro pendente do motorista foi recuperado sem reset. Revisão distinta compilada4/4, runtime23/23, HTTPPython3/3 e demais evidências delimitadas. Fiscal real, fornecedores/contratos, segurança/permissões, acessibilidade integral, carga e aceite operacional permanecem abertos. A campanha de permissões anteriormente rejeitada pela plataforma não foi repetida.
+
+Owner desta integração/publicação: PULSO; autores e revisor congelados ao final, sem escrita concorrente. Governança/coordenação comercial anterior permanece histórica, sem novo despacho após respostas alheias ao escopo. Próxima ação elegível depende de gate concreto: escolha de fornecedor/contrato para homologação externa, ou observação humana de falha nova no simulador. Não criar vigilância, agenda ou operação corporativa por inferência. Aceite humano/consumo corporativo/custo desconhecidos.
+
+---
+
+## Estado vigente integrado em 25/11/2026
+
+**APLICACAO_LOCAL_FUNCIONAL_COM_GATES_ABERTOS. Produto completo não aceito.** Esta atualização substitui apenas os estados correntes anteriores abaixo, preservados como histórico. A aplicação nova fica em `application/`, porta8766; protótipo e banco8765 preservados. [Entrega e acesso](ENTREGA-LOCAL-20261125.md), [matriz por capacidade](MATRIZ-CONCLUSAO.json), [execução/recuperação](application/README.md).
+
+48 capacidades funcionais revisadas no recorte,7 adaptadores/envelopes DEMO testados,12 capacidades compostas parciais. Módulos não recebem aceite global por contagem. Permanecem: revisão de permissões limitada por bloqueio automático; fornecedores/contratos e homologação fiscal/externa; acessibilidade integral e critérios operacionais de produção. Rafael reafirmou fornecedores ainda indefinidos; não repetir pergunta.
+
+Último efeito PULSO: integração de provas/documentação, com backups/hash-base/readback; nenhum código, sessão ou banco alterado. Owner lógico RS - Gestão Comercial. Próxima ação: recuperar matriz e evidências antes de retomar cada gate; não repetir testes já suficientes nem categoria de ação rejeitada. Coordenação retornou assunto distinto após trabalho TMS; causa desconhecida, sem presumir efeito externo. Operação cotidiana e qualquer retomada devem reconciliar escopo atual antes de escrever.
+
+---
+
+# TMS independente estudo e blueprint
+
+Iniciativa TMS-INDEPENDENTE-20261125-01, versão documental 0.2, 25/11/2026. Produto independente para embarcadores e transportadores, com módulos separados, começando por entregas de e-commerce e última milha no Brasil, conforme decisões de Rafael. O pacote contém o blueprint e uma primeira fatia funcional local sintética, revisada. Não é um TMS completo nem está liberado para produção.
+
+## Leitura
+
+- [Contrato e decisões](CONTRATO.md)
+- [Fontes e comparação](FONTES-E-COMPARACAO.md)
+- [Produto e requisitos](PRD.md)
+- [Jornada inicial de e-commerce](ECOMMERCE.md)
+- [Arquitetura e domínio](ARQUITETURA.md)
+- [Contratos de API candidatos](API.md)
+- [Testes e ondas](TESTES-E-ONDAS.md)
+- [Estado e próximas ações](project-state.md)
+
+Owner único: RS - Gestão Comercial, thread 01a0bdd1-1297-78c0-b858-a1bf42b18530. Coordenação por referência em 07-negocios-projetos; todos os artefatos do produto permanecem nesta raiz própria. Não é extensão de produto corporativo. Não houve acesso a implementações proprietárias dos fornecedores.
+
+## Demonstração e evidências
+
+[Abra a demonstração neste computador](http://127.0.0.1:8765). Servidor temporário em loopback, sem serviço permanente. [Como executar e limites](prototype/README.md). Para retomar o percurso atual, iniciar com --db runtime/preview.sqlite; o padrão runtime/demo.sqlite é outro banco de demonstração.
+
+Fluxo verificado: cotação, pedido/pacotes, custo logístico separado da cobrança consumidor, oferta/reserva, etiqueta simulada com UNKNOWN reconciliado, despacho, insucesso, entrega parcial/completa, fatura/auditoria e reversa. Testes: 22 da suíte e quatro contraprovas independentes passaram, sem representar os 32 cenários documentais integrais.
+
+- [Revisão documental](evidencias/REVISAO-DOCUMENTAL.md)
+- [Revisão de código e contraprovas](evidencias/revisao-codigo/RESULTADO.md)
+- [Hashes dos arquivos de código](prototype/snapshot.json)
+- [Evidência de interface e reinício](evidencias/preview-final.json)
+
+Integrações, fiscal e documentos são fictícios; sem autenticação produtiva, envio, pagamento, estoque próprio ou replanejamento completo. Próxima evolução: fechar cidades/cargas e contratos de integração, enquanto ampliar casos locais sem dados reais.

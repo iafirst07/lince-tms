@@ -10,10 +10,10 @@ for(const route of routes){const response=await handler.fetch(new Request('https
 const spec=await(await handler.fetch(new Request('https://lince.example/docs/openapi.json'),{})).json();
 assert.ok(spec.openapi.startsWith('3.1.'));assert.equal(spec['x-runtime'],'PUBLIC_SIMULATION_ONLY');
 assert.equal(spec.components.schemas.CommandEnvelope.oneOf.some(x=>x.properties?.command?.const==='migration_rollback'),false);
-assert.equal(spec.components.schemas.CommandEnvelope.oneOf.length,72);
+assert.equal(spec.components.schemas.CommandEnvelope.oneOf.length,81);
 const manifest=await(await handler.fetch(new Request('https://lince.example/driver/manifest.webmanifest'),{})).json();assert.equal(manifest.scope,'/driver/');assert.ok(manifest.icons.length>=2);
 const desktop=await(await handler.fetch(new Request('https://lince.example/'),{})).text();assert.ok(desktop.includes('/demo-context.js'));assert.ok(desktop.includes('/simulation-console.js'));assert.ok(desktop.includes('Lince'));
 const sw=await(await handler.fetch(new Request('https://lince.example/driver/driver-sw.js'),{})).text();assert.ok(sw.includes("'/demo-context.js'"));
 const hosting=JSON.parse(fs.readFileSync(path.join(root,'.openai/hosting.json'),'utf8'));assert.ok(hosting.project_id);assert.ok(hosting.d1);assert.equal(hosting.static,undefined);
 assert.ok(fs.readFileSync(path.join(root,'drizzle/0000_lince_simulation.sql'),'utf8').includes('simulation_file_chunks'));
-console.log(JSON.stringify({compiledStaticRoutes:routes.length,publicCommandSchemas:72,manifest:'PASS',databaseMigration:'PRESENT',scope:'Compiled artifact static/document contracts, not browser or hosted D1'}));
+console.log(JSON.stringify({compiledStaticRoutes:routes.length,publicCommandSchemas:81,manifest:'PASS',databaseMigration:'PRESENT',scope:'Compiled artifact static/document contracts, not browser or hosted D1'}));

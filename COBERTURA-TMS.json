@@ -135,7 +135,14 @@
       "benchmark": "S1R,S2R",
       "gap": "Calculo atual usa base+peso+adicionais. Dimensoes existem, mas peso cubado/taxavel por contrato nao esta demonstrado.",
       "priority": "P1",
-      "acceptance": "Caixa leve volumosa muda frete somente pela regra contratual versionada; recusa ambiguidade."
+      "acceptance": "Caixa leve volumosa muda frete somente pela regra contratual versionada; recusa ambiguidade.",
+      "review20261126": {
+        "state": "SIMULACAO_LOCAL_REVISADA",
+        "delta": "Política opcional versionada de cubagem, aritmética racional e memória de cálculo; não fator de contrato homologado.",
+        "evidence": "evidencias/revisao-lince-20261126/",
+        "productionAccepted": false,
+        "physicalDeviceAccepted": false
+      }
     },
     {
       "id": "C03",
@@ -159,7 +166,14 @@
       "benchmark": "PROPOSTA_BR",
       "gap": "consumerCharge/subsidio por pedido existem; nao comprova regra unica para carrinho com CD+loja/retirada e multiplos embarques.",
       "priority": "P0",
-      "acceptance": "Um carrinho com duas origens e retirada gera uma unica cobranca esperada; custo por perna/rateio distinto, rebooking nao duplica."
+      "acceptance": "Um carrinho com duas origens e retirada gera uma unica cobranca esperada; custo por perna/rateio distinto, rebooking nao duplica.",
+      "review20261126": {
+        "state": "SIMULACAO_LOCAL_REVISADA",
+        "delta": "Checkout pai/filhos multi-origem; cobrança única e rateio em centavos. Não é checkout varejista integrado nem compensação após release.",
+        "evidence": "evidencias/revisao-lince-20261126/",
+        "productionAccepted": false,
+        "physicalDeviceAccepted": false
+      }
     },
     {
       "id": "C05",
@@ -207,7 +221,14 @@
       "benchmark": "S1R,B1R",
       "gap": "Custodia por etapas existe; stops atuais representam destinos de pedidos. Coleta nao tem parada de origem explicitamente tipada no snapshot mobile.",
       "priority": "P1",
-      "acceptance": "Paradas PICKUP/HUB/DELIVERY com origem/destino, volumes e janelas correspondentes."
+      "acceptance": "Paradas PICKUP/HUB/DELIVERY com origem/destino, volumes e janelas correspondentes.",
+      "review20261126": {
+        "state": "PARCIAL_COM_COLETA_EXPLICITA",
+        "delta": "pickupStops separados de stops de entrega; mesma origem explícita por plano; recibo por coleta antes da saída. HUB permanece etapa, não visita otimizada.",
+        "evidence": "evidencias/revisao-lince-20261126/",
+        "productionAccepted": false,
+        "physicalDeviceAccepted": false
+      }
     },
     {
       "id": "C09",
@@ -219,7 +240,14 @@
       "benchmark": "O7,B3",
       "gap": "Calendario e janela de pedido nao sao reserva de doca ou check-in/out de patio.",
       "priority": "P1",
-      "acceptance": "Concorrencia pelo mesmo slot, remarcacao/cancelamento e chegada atrasada sem overbooking."
+      "acceptance": "Concorrencia pelo mesmo slot, remarcacao/cancelamento e chegada atrasada sem overbooking.",
+      "review20261126": {
+        "state": "SIMULACAO_LOCAL_REVISADA",
+        "delta": "Docas/capacidade/reserva/remarcação/check-in-out fictícios. Sem sensor, gate físico ou gestão integral de pátio.",
+        "evidence": "evidencias/revisao-lince-20261126/",
+        "productionAccepted": false,
+        "physicalDeviceAccepted": false
+      }
     },
     {
       "id": "C10",
@@ -243,7 +271,14 @@
       "benchmark": "O7,B4",
       "gap": "PWA consultada em Edge390x844; listas e foto opcional existem. Multi-parada mostra V1 repetido sem pedido e todos preselecionados.",
       "priority": "P0",
-      "acceptance": "Selecionar parada/pedido exibe somente volumes elegiveis; nenhuma outra parada e implicitamente confirmada."
+      "acceptance": "Selecionar parada/pedido exibe somente volumes elegiveis; nenhuma outra parada e implicitamente confirmada.",
+      "review20261126": {
+        "state": "SIMULACAO_LOCAL_REVISADA",
+        "delta": "Seleção explícita de parada e volumes por pedido, sem pré-seleção; legado ambíguo bloqueado. Revisão de fonte/DOM mínimo; aparelhos reais pendentes.",
+        "evidence": "evidencias/revisao-lince-20261126/",
+        "productionAccepted": false,
+        "physicalDeviceAccepted": false
+      }
     },
     {
       "id": "C12",
@@ -267,7 +302,14 @@
       "benchmark": "O7,A1,G1",
       "gap": "manifest start_url=/driver/ sem workspace; demo-context usa sessionStorage. Reabrir instalado no mesmo cenario e risco a testar, nao defeito observado.",
       "priority": "P0",
-      "acceptance": "Instalar/fechar/reabrir em AndroidChrome e iOSSafari mantendo UUID/persona/viagem, sem outra massa silenciosa."
+      "acceptance": "Instalar/fechar/reabrir em AndroidChrome e iOSSafari mantendo UUID/persona/viagem, sem outra massa silenciosa.",
+      "review20261126": {
+        "state": "BLOQUEADO_NO_CANDIDATO",
+        "delta": "Viagem selecionada pode ser lembrada no mesmo contexto. Workspace/persona persistente standalone excluído após três ciclos; armazenamento negado ainda falha no candidato.",
+        "evidence": "evidencias/revisao-lince-20261126/",
+        "productionAccepted": false,
+        "physicalDeviceAccepted": false
+      }
     },
     {
       "id": "C14",
@@ -303,7 +345,14 @@
       "benchmark": "B1R",
       "gap": "Reversa de volumes entregues e estados existe no dominio; PWA filtra viagens e nao oferece return_progress/tarefa de reversa.",
       "priority": "P1",
-      "acceptance": "Reversa autorizada vira tarefa atribuida; motorista coleta, operacao recebe; replay nao duplica."
+      "acceptance": "Reversa autorizada vira tarefa atribuida; motorista coleta, operacao recebe; replay nao duplica.",
+      "review20261126": {
+        "state": "SIMULACAO_LOCAL_REVISADA",
+        "delta": "Retorno autorizado pode ser atribuído e coletado pelo motorista com recibo/replay; recebimento/fechamento pela operação. Sem coleta física ou fiscal real.",
+        "evidence": "evidencias/revisao-lince-20261126/",
+        "productionAccepted": false,
+        "physicalDeviceAccepted": false
+      }
     },
     {
       "id": "C17",
@@ -489,5 +538,10 @@
     "author": "cobertura_tms",
     "scope": "Revisao distinta documental/de codigo; sem certificacao de fornecedores ou aparelhos reais",
     "recordSha256": "9750a5082fe4303c750bd0b081526c4318f804ba5c58254860a5c86d3542606e"
+  },
+  "latestLocalReview": {
+    "date": "2026-11-26",
+    "scope": "Finite six-unit local review; candidate context blocked and excluded; original baseline gap descriptions retained as history",
+    "productionReady": false
   }
 }

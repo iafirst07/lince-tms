@@ -1,5 +1,5 @@
 'use strict';
-const CACHE='rota-shell-20261125-qa1';
+const CACHE='rota-shell-20261126-p0';
 const ASSETS=['/','/app.js','/style.css','/navigation.js','/navigation.css','/form-state.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('rota-shell-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

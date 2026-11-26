@@ -51,7 +51,7 @@ for(const [url,[name,mime]] of Object.entries(definitions)){
   let text=bytes.toString('utf8');
   text=text.replace(/const SHELL = \[/,"const SHELL = ['/demo-context.js',");
   if(name==='sw.js')text=text.replace(/const ASSETS=\[/,"const ASSETS=['/demo-context.js','/simulation-console.js',");
-  text=text.replace('lince-driver-shell-v1','lince-driver-public-v1');
+  text=text.replace('lince-driver-shell-v1','lince-driver-public-v2');
   if(name==='driver-sw.js')text=text.replace('|| url.search) return;',"|| (url.search && url.pathname !== '/driver/')) return;");
   bytes=Buffer.from(text);
  }
@@ -59,7 +59,8 @@ for(const [url,[name,mime]] of Object.entries(definitions)){
 }
 const read=n=>fs.readFileSync(path.join(root,'public-runtime',n),'utf8');
 const strip=s=>s.replace(/^import\s+[\s\S]*?\s+from\s+['"][^'"]+['"];?\s*$/gm,'').replace(/^export\s*\{[^}]*\};?\s*$/gm,'').replace(/\bexport\s+(?=(?:async\s+)?(?:function|class)\b|(?:const|let|var)\b)/g,'');
-const domain=strip(read('domain.mjs')),worker=strip(read('worker.mjs'));
+const isolated=(file,names)=>'const {'+names.join(',')+'}=(()=>{\n'+strip(read(file))+'\nreturn {'+names.join(',')+'};})();\n';
+const domain=isolated('volumetric.mjs',['validatePolicy','validateExactRate','overlapWeightBands','calculation','inBand','priceLines','totalLines'])+isolated('commerce.mjs',['createCheckoutHandlers'])+isolated('driver-tasks.mjs',['createDriverTaskHandlers'])+isolated('dock.mjs',['createDockHandlers'])+strip(read('domain.mjs')),worker=strip(read('worker.mjs'));
 if(/^import /m.test(domain+'\n'+worker))throw new Error('Unbundled import');
 const seed=JSON.parse(read('seed.json'));
 const domainImports=read('worker.mjs').match(/import\s*\{([^}]+)\}\s*from\s*['"]\.\/domain\.mjs['"]/);

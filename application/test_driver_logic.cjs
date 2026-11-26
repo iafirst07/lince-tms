@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const {namespace, contextFor, selectTrips, snapshotView, makeRecord, synchronize, sendPendingClaim} = require('./driver.js');
+const {namespace, contextFor, selectTrips, snapshotView, scopeForStop, checkedStopKeys, restorableTripId, makeTaskRecord, sendPendingTask, makeRecord, synchronize, sendPendingClaim} = require('./driver.js');
 const user = {id: 'driver-demo', org: 'carrier-demo', username: 'motorista.demo'};
 const trip = {id: 'shipment-demo', kind: 'shipment', version: 8, planVersion: 2, assignmentId: 'assignment-demo', driverUserId: user.id, status: 'IN_TRANSIT', stage: 'DELIVERY', start: '2026-11-25T10:00:00Z', delivered: [], packages: [{key: 'ORDER:P1', id: 'P1', weightKg: '2'}, {key: 'ORDER:P2', id: 'P2', weightKg: '3'}], stops: [{arrival: '2026-11-25T11:00:00Z', destination: {name: 'Destino fictício', postalCode: '01001000', lat: -23.5, lon: -46.6, privateField: 'not-for-client'}, orderReference: 'PEDIDO-DEMO'}], cost: '100.00', margin: 'secret'};
 const payload = index => ({shipmentId: trip.id, version: 8, proofId: `PROOF-${index}`, packageKeys: [`ORDER:P${index}`], outcome: 'DELIVERED', reason: 'Recebido no cenário fictício', occurredAt: '2026-11-25T11:00:00Z'});
@@ -21,6 +21,89 @@ function options(store, send, currentUser = () => user) {
 }
 const tests = [];
 const test = (name, run) => tests.push({name, run});
+test('P0 snapshot preserves order/stop/package association for repeated volume IDs', () => {
+  const source = {...cp(trip), packages:[{key:'A:1',id:'1',orderId:'A',weightKg:'1'},{key:'B:1',id:'1',orderId:'B',weightKg:'1'}],stops:[{orderId:'A',orderReference:'PED-A'},{orderId:'B',orderReference:'PED-B'}]};
+  const saved=snapshotView({objects:[source],commands:['pod']},user).trips[0];
+  assert.equal(saved.stops[0].orderId,'A');assert.equal(saved.stops[1].orderReference,'PED-B');assert.equal(saved.packages[1].orderId,'B');
+});
+function twoStops() { return {...cp(trip),packages:[{key:'A:1',id:'1',orderId:'A',weightKg:'1'},{key:'A:2',id:'2',orderId:'A',weightKg:'2'},{key:'B:1',id:'1',orderId:'B',weightKg:'3'}],stops:[{orderId:'A',orderReference:'PEDIDO-A'},{orderId:'B',orderReference:'PEDIDO-B'}]}; }
+test('P0 requires explicit stop selection and never preselects even a single available volume',()=>{
+  const source=twoStops();assert.equal(scopeForStop(source,null).valid,false);
+  assert.equal(scopeForStop(source,'A').valid,true);assert.equal(scopeForStop(source,'A').packages.some(p=>p.selected),false);
+  assert.throws(()=>checkedStopKeys(source,'A',[]),/somente volumes/);
+});
+test('P0 repeated Volume1 labels identify order and distinct package keys',()=>{
+  const source=twoStops(),a=scopeForStop(source,'A'),b=scopeForStop(source,'B');
+  assert.deepEqual(a.packages.map(p=>p.key),['A:1','A:2']);assert.deepEqual(b.packages.map(p=>p.key),['B:1']);
+  assert.notEqual(a.packages[0].label,b.packages[0].label);assert.match(a.packages[0].label,/PEDIDO-A \(A\).*Volume 1/);assert.match(b.packages[0].label,/PEDIDO-B \(B\).*Volume 1/);
+});
+test('P0 POD and claim use same stop guard and reject other-stop, duplicate or unknown keys',()=>{
+  const source=twoStops();assert.deepEqual(checkedStopKeys(source,'A',['A:1']),['A:1']);
+  for(const keys of [['B:1'],['A:1','B:1'],['A:1','A:1'],['unknown']])assert.throws(()=>checkedStopKeys(source,'A',keys),/somente volumes/);
+});
+test('P0 delivered and all pending POD outcomes disable selection without resetting queue',()=>{
+  const source=twoStops();source.delivered=['A:1'];const scope=scopeForStop(source,'A',['A:2']);
+  assert.equal(scope.packages.every(p=>p.disabled),true);assert.throws(()=>checkedStopKeys(source,'A',['A:1']),/somente volumes/);assert.throws(()=>checkedStopKeys(source,'A',['A:2'],['A:2']),/somente volumes/);
+});
+test('P0 changing stop creates fresh unchecked choices and rejects old-stop selection',()=>{
+  const source=twoStops(),a=scopeForStop(source,'A');a.packages[0].selected=true;
+  const b=scopeForStop(source,'B');assert.equal(b.packages.every(p=>p.selected===false),true);assert.throws(()=>checkedStopKeys(source,'B',['A:1']),/somente volumes/);assert.equal(scopeForStop(source,'A').packages[0].selected,false);
+});
+test('P0 legacy missing association is visible as blocked and never derived from keys or position',()=>{
+  const source=twoStops();delete source.packages[0].orderId;
+  assert.equal(scopeForStop(source,'A').valid,false);assert.match(scopeForStop(source,'A').reason,/Não confirme por posição/);assert.throws(()=>checkedStopKeys(source,'A',['A:1']),/Associação/);
+  const missing=twoStops();delete missing.stops[0].orderId;assert.equal(scopeForStop(missing,'B').valid,false);
+});
+test('P0 ambiguous stop links or duplicate package keys block even apparently matching IDs',()=>{
+  const source=twoStops();source.stops[1].orderId='A';assert.equal(scopeForStop(source,'A').valid,false);
+  const duplicate=twoStops();duplicate.packages[1].key='A:1';assert.equal(scopeForStop(duplicate,'A').valid,false);
+  const unknown=twoStops();unknown.packages[0].orderId='NOT-A-STOP';assert.equal(scopeForStop(unknown,'A').valid,false);
+});
+test('P0 cached snapshot reopens same order scopes and selected POD survives lost-response replay unchanged',async()=>{
+  const source=twoStops(),before=cp(source),saved=JSON.parse(JSON.stringify(snapshotView({objects:[source],commands:['pod']},user))).trips[0];
+  const keys=checkedStopKeys(saved,'B',['B:1']),body={...payload(1),packageKeys:keys},record=makeRecord(user,saved,'pod',body,null,'scoped');
+  const store=memoryStore([record]);let attempts=0,first;
+  const send=async(cmd,body,key)=>{const serialized=JSON.stringify({cmd,body,key});if(!first)first=serialized;else assert.equal(serialized,first);assert.deepEqual(body.payload.packageKeys,['B:1']);if(++attempts===1)throw new TypeError('Lost');return {};};
+  await assert.rejects(synchronize(options(store,send)),/Lost/);await synchronize(options(memoryStore([...store.records.values()]),send));
+  assert.deepEqual(source,before);assert.equal(attempts,2);assert.equal(scopeForStop(saved,'B').packages[0].selected,false);
+});
+test('C13 restores only saved tripID still assigned in the current actor view without restoring volumes',()=>{
+  const view=snapshotView({objects:[twoStops()],commands:['pod']},user),saved=trip.id;
+  assert.equal(restorableTripId(saved,view,user),trip.id);assert.equal(restorableTripId(saved,JSON.parse(JSON.stringify(view)),user),trip.id);
+  assert.equal(scopeForStop(view.trips[0],null).valid,false);
+});
+test('C13 stale, cancelled, unassigned and foreign-view trip selection does not reopen',()=>{
+  const view=snapshotView({objects:[twoStops()],commands:['pod']},user);
+  assert.equal(restorableTripId('removed',view,user),null);assert.equal(restorableTripId(trip.id,{...view,trips:[]},user),null);
+  assert.equal(restorableTripId(trip.id,{...view,trips:[{...view.trips[0],status:'CANCELLED'}]},user),null);
+  assert.equal(restorableTripId(trip.id,{...view,trips:[{...view.trips[0],driverUserId:'another-driver'}]},user),null);
+  assert.equal(restorableTripId(trip.id,view,{...user,id:'another-driver'}),null);
+  assert.equal(restorableTripId(trip.id,view,{...user,org:'another-org'}),null);
+});
+test('C13 metadata namespace is user/org bound, stores ID only and does not remove existing queue',()=>{
+  const records=memoryStore([makeRecord(user,trip,'pod',payload(1),null,'keep')]);
+  const selectedByOwner=new Map([[`selection:${namespace(user)}`,trip.id]]);
+  assert.equal(selectedByOwner.get(`selection:${namespace({...user,id:'other'})}`),undefined);assert.equal(selectedByOwner.get(`selection:${namespace({...user,org:'other'})}`),undefined);
+  assert.equal(typeof selectedByOwner.values().next().value,'string');selectedByOwner.delete(`selection:${namespace(user)}`);assert.equal(records.records.size,1);
+});
+test('L5 snapshot preserves explicit pickup identities separately and minimal assigned return points',()=>{
+ const source=twoStops();source.pickupStops=[{stopId:'pickup:A',type:'PICKUP',orderId:'A',orderReference:'PED-A',packageKeys:['A:1','A:2'],originSnapshot:{name:'Origem fictícia',postalCode:'01001000',privateField:'hidden'}}];
+ const ret={id:'r',kind:'return',version:1,shipmentId:source.id,driverUserId:user.id,taskId:'task-r',taskVersion:1,status:'AUTHORIZED',packageKeys:['A:1'],orderId:'A',sourceSnapshot:{postalCode:'02002000',privateField:'hidden'},destinationSnapshot:{postalCode:'01001000'},cost:'hidden'};
+ const view=snapshotView({objects:[source,ret,{...ret,id:'other',driverUserId:'other'}],commands:['pickup_confirm','driver_return_collect']},user);
+ assert.deepEqual(view.commands,['pickup_confirm','driver_return_collect']);assert.equal(view.trips[0].pickupStops[0].stopId,'pickup:A');assert.equal(view.trips[0].pickupStops[0].originSnapshot.privateField,undefined);assert.equal(view.returns.length,1);assert.equal(view.returns[0].cost,undefined);assert.equal(view.returns[0].sourceSnapshot.privateField,undefined);
+ assert.equal(scopeForStop(view.trips[0],'A').valid,true);assert.equal(scopeForStop(view.trips[0],'pickup:A').valid,false);
+});
+test('L5 online task lost response reuses original key/payload and keeps durable pending until receipt',async()=>{
+ for(const command of ['pickup_confirm','driver_return_collect']){
+  const payload={id:'synthetic-return',taskId:'task',version:1,packageKeys:['A:1'],eventId:'same'},record=makeTaskRecord(user,command,payload,'fixed');payload.packageKeys.push('B:1');assert.deepEqual(record.payload.packageKeys,['A:1']);let stored=cp(record),calls=0,original;
+  const opts=()=>({user,currentUser:()=>user,record:cp(stored),fetchSession:async()=>({user}),sessionReady(){},send:async(cmd,body,key)=>{const now=JSON.stringify({cmd,body,key});if(!original)original=now;else assert.equal(now,original);if(++calls===1)throw new TypeError('Lost task response');return {eventId:'same'};},confirmed:async()=>{stored=null;}});
+  await assert.rejects(sendPendingTask(opts()),/Lost task/);assert.notEqual(stored,null);await sendPendingTask(opts());assert.equal(stored,null);assert.equal(calls,2);
+ }
+});
+test('L5 context-conflict pending task is preserved for explicit reconciliation and not resent',async()=>{
+ const record=makeTaskRecord(user,'pickup_confirm',{eventId:'same',packageKeys:['A:1']},'blocked');record.blocked=true;let calls=0;
+ await assert.rejects(sendPendingTask({user,currentUser:()=>user,record,fetchSession:async()=>{calls++;return {user};},sessionReady(){},send:async()=>{calls++;},confirmed:async()=>{calls++;}}),/conferência/);assert.equal(calls,0);assert.deepEqual(record.payload.packageKeys,['A:1']);
+});
 
 test('view contains only assigned operational trips and minimal destination fields', () => {
   const data = {objects: [trip, {...trip, id: 'other', driverUserId: 'other'}, {id: 'invoice', kind: 'invoice', amount: '100'}], commands: ['pod', 'tracking', 'invoice_create']};

@@ -2,7 +2,7 @@
   "openapi": "3.1.1",
   "info": {
     "title": "Lince — API canônica local",
-    "version": "0.4.0-local-qa",
+    "version": "0.5.0-local-review",
     "description": "Contrato do backend Python local de dados fictícios. Desktop e PWA usam a mesma API. Não é homologação fiscal, revisão de segurança ou aceite produtivo. A demonstração pública Worker é implementação própria de laboratório: conferir sua paridade explicitamente, sem inferir que todos estes comandos estejam disponíveis."
   },
   "servers": [
@@ -1913,6 +1913,11 @@
             "type": "string",
             "pattern": "^\\d{1,10}(\\.\\d{1,6})?$",
             "description": "Número decimal não negativo codificado como string; limites adicionais são de domínio."
+          },
+          "perStopPickup": {
+            "type": "boolean",
+            "default": false,
+            "description": "Explicit same-origin pickup stops; each must be confirmed before departure."
           }
         },
         "additionalProperties": true,
@@ -5898,6 +5903,141 @@
               "command",
               "payload"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "const": "checkout_create"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/Command_checkout_create"
+              }
+            },
+            "required": [
+              "command",
+              "payload"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "const": "checkout_cancel"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/Command_checkout_cancel"
+              }
+            },
+            "required": [
+              "command",
+              "payload"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "const": "pickup_confirm"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/Command_pickup_confirm"
+              }
+            },
+            "required": [
+              "command",
+              "payload"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "const": "return_assign"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/Command_return_assign"
+              }
+            },
+            "required": [
+              "command",
+              "payload"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "const": "driver_return_collect"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/Command_driver_return_collect"
+              }
+            },
+            "required": [
+              "command",
+              "payload"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "const": "dock_create"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/Command_dock_create"
+              }
+            },
+            "required": [
+              "command",
+              "payload"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "const": "dock_reserve"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/Command_dock_reserve"
+              }
+            },
+            "required": [
+              "command",
+              "payload"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "const": "dock_reschedule"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/Command_dock_reschedule"
+              }
+            },
+            "required": [
+              "command",
+              "payload"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "const": "dock_progress"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/Command_dock_progress"
+              }
+            },
+            "required": [
+              "command",
+              "payload"
+            ]
           }
         ],
         "description": "Um comando por solicitação, com campos/formas conhecidos dos69comandos revisados em fonte. O conjunto disponível depende do usuário e do ambiente. Regras de estado e demais invariantes continuam no domínio."
@@ -6286,6 +6426,38 @@
             "items": {
               "$ref": "#/components/schemas/RateAddition"
             }
+          },
+          "volumetricPolicy": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "VOLUMETRIC_MAX_TOTAL_KG_V1"
+              },
+              "dimensionUnit": {
+                "const": "CM"
+              },
+              "divisorCm3PerKg": {
+                "type": "string",
+                "description": "Explicit synthetic/configured divisor; 6000 is an example, not a carrier rule."
+              },
+              "rounding": {
+                "const": "CEILING_0_001_KG"
+              },
+              "aggregation": {
+                "const": "MAX_OF_TOTAL_REAL_AND_TOTAL_VOLUMETRIC"
+              },
+              "minimumBillableKg": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "dimensionUnit",
+              "divisorCm3PerKg",
+              "rounding",
+              "aggregation",
+              "minimumBillableKg"
+            ]
           }
         },
         "additionalProperties": true,
@@ -6988,6 +7160,297 @@
               "capacityKg": "120"
             }
           }
+        ]
+      },
+      "Command_checkout_create": {
+        "type": "object",
+        "properties": {
+          "externalId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "consumerCharge": {
+            "type": "string",
+            "pattern": "^\\d{1,10}(\\.\\d{1,2})?$"
+          },
+          "children": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "description": "Order_create fields except consumerCharge. Same destination location, origins may differ; quote snapshot and packages required."
+            }
+          }
+        },
+        "required": [
+          "externalId",
+          "consumerCharge",
+          "children"
+        ]
+      },
+      "Command_checkout_cancel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id",
+          "version"
+        ]
+      },
+      "Command_pickup_confirm": {
+        "type": "object",
+        "properties": {
+          "shipmentId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "planVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "assignmentId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stopId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "packageKeys": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "eventId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "shipmentId",
+          "version",
+          "planVersion",
+          "assignmentId",
+          "stopId",
+          "packageKeys",
+          "eventId"
+        ]
+      },
+      "Command_return_assign": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "windowStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "windowEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "destinationLocationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "windowStart",
+          "windowEnd",
+          "reason"
+        ]
+      },
+      "Command_driver_return_collect": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "taskId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "packageKeys": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "eventId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "taskId",
+          "packageKeys",
+          "eventId"
+        ]
+      },
+      "Command_dock_create": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "locationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name",
+          "locationId",
+          "capacity",
+          "timezone"
+        ]
+      },
+      "Command_dock_reserve": {
+        "type": "object",
+        "properties": {
+          "dockId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "units": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "shipmentId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "dockId",
+          "reference",
+          "start",
+          "end",
+          "units"
+        ]
+      },
+      "Command_dock_reschedule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "start",
+          "end",
+          "reason"
+        ]
+      },
+      "Command_dock_progress": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "status": {
+            "enum": [
+              "CHECKED_IN",
+              "CHECKED_OUT",
+              "CANCELLED",
+              "NO_SHOW"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "status",
+          "reason"
         ]
       }
     }
@@ -9705,5 +10168,6 @@
     ],
     "schemaIsNotDomainAcceptance": true
   },
-  "x-example-scope": "Exemplos sintéticos de forma. IDs demo-* são ilustrativos e devem ser substituídos pelos IDs lidos na instância; exemplos de schema não comprovam aceitação de domínio. Tutorial executável obtém IDs reais da massa local."
+  "x-example-scope": "Exemplos sintéticos de forma. IDs demo-* são ilustrativos e devem ser substituídos pelos IDs lidos na instância; exemplos de schema não comprovam aceitação de domínio. Tutorial executável obtém IDs reais da massa local.",
+  "x-local-review": "Fictitious checkout, pickup/return, dock and optional volumetric policy. No physical proof or corporate release."
 }
