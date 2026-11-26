@@ -5,7 +5,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const handler=(await import(pathToFileURL(path.join(root,'dist/server/index.js')).href+'?validate='+Date.now())).default;
 assert.equal(typeof handler.fetch,'function');
-const routes=['/form-state.js','/navigation.js','/navigation.css','/','/app.js','/style.css','/sw.js','/driver/','/driver/driver.js','/driver/driver.css','/driver/driver-sw.js','/driver/manifest.webmanifest','/driver/icon.svg','/driver/icon-192.png','/driver/icon-512.png','/docs/','/docs/openapi.json','/demo-context.js','/simulation-console.js'];
+const routes=['/driver/scanner.js','/driver/vendor/jsQR.js','/driver/vendor/qrcode.js','/driver/vendor/LICENSE','/driver/vendor/qrcode.LICENSE','/explore-guide.js','/form-state.js','/navigation.js','/navigation.css','/','/app.js','/style.css','/sw.js','/driver/','/driver/driver.js','/driver/driver.css','/driver/driver-sw.js','/driver/manifest.webmanifest','/driver/icon.svg','/driver/icon-192.png','/driver/icon-512.png','/docs/','/docs/openapi.json','/demo-context.js','/simulation-console.js'];
 for(const route of routes){const response=await handler.fetch(new Request('https://lince.example'+route),{});assert.equal(response.status,200,route);const bytes=await response.arrayBuffer();assert.ok(bytes.byteLength>0,route);}
 const spec=await(await handler.fetch(new Request('https://lince.example/docs/openapi.json'),{})).json();
 assert.ok(spec.openapi.startsWith('3.1.'));assert.equal(spec['x-runtime'],'PUBLIC_SIMULATION_ONLY');

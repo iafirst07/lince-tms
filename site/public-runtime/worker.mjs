@@ -1,6 +1,8 @@
+import {createExploration} from './exploration.mjs';
 import {createWorkspace,choosePersona,personas,stateFor,executeCommand,fingerprintRequest,simulate,kpis,ApiError,COMMANDS} from './domain.mjs';
 import {SEED,ASSETS} from './generated.mjs';
 
+const enrichExploration=createExploration({executeCommand,choosePersona});
 const encoder=new TextEncoder();
 const json=(body,status=200,extra={})=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer',...extra}});
 const assert=(ok,code,status=400)=>{if(!ok)throw new ApiError(code,status);};
@@ -20,10 +22,10 @@ async function externalizeFiles(db,workspaceId,w){
   }
 }
 function serialized(w){const value=JSON.stringify(w);assert(encoder.encode(value).length<=MAX_JSON,'SIMULATION_WORKSPACE_LIMIT',413);return value;}
-async function load(db,wid,seed,now){
+async function load(db,wid,seed,now,exploration=false){
   let row=await db.prepare('SELECT version,data FROM simulation_workspaces WHERE id=?').bind(wid).first();
   if(row)return{version:Number(row.version),workspace:JSON.parse(row.data)};
-  const w=createWorkspace(seed,now);await externalizeFiles(db,wid,w);const body=serialized(w);
+  const base=createWorkspace(seed,now),w=exploration?enrichExploration(base,{enabled:true}):base;await externalizeFiles(db,wid,w);const body=serialized(w);
   await db.prepare('INSERT OR IGNORE INTO simulation_workspaces (id,version,data,updated_at) VALUES (?,1,?,?)').bind(wid,body,now).run();
   row=await db.prepare('SELECT version,data FROM simulation_workspaces WHERE id=?').bind(wid).first();assert(row,'WORKSPACE_CREATE_FAILED',503);return{version:Number(row.version),workspace:JSON.parse(row.data)};
 }
@@ -50,7 +52,7 @@ function zipStored(name,body){
   ev.setUint32(0,0x06054b50,true);ev.setUint16(8,1,true);ev.setUint16(10,1,true);ev.setUint32(12,central.length,true);ev.setUint32(16,local.length+bytes.length,true);
   const output=new Uint8Array(local.length+bytes.length+central.length+end.length);output.set(local);output.set(bytes,local.length);output.set(central,local.length+bytes.length);output.set(end,local.length+bytes.length+central.length);return output;
 }
-export function createWorker({seed,assets}){
+export function createWorker({seed,assets,exploration=false}){
   return{async fetch(request,env){
     const url=new URL(request.url),path=url.pathname;
     try{
@@ -62,7 +64,7 @@ export function createWorker({seed,assets}){
       }
       assert(env.DB,'SIMULATION_DATABASE_UNAVAILABLE',503);
       const wid=request.headers.get('X-Lince-Workspace')||url.searchParams.get('workspace');assert(UUID.test(wid||''),'WORKSPACE_REQUIRED');
-      const now=new Date().toISOString(),loaded=await load(env.DB,wid,seed,now),w=loaded.workspace;
+      const now=new Date().toISOString(),loaded=await load(env.DB,wid,seed,now,exploration),w=loaded.workspace;
       let identifier=request.headers.get('X-Lince-Persona')||url.searchParams.get('persona');
       if(request.method==='GET'&&path==='/api/personas')return json({simulation:true,workspace:wid,personas:personas(w),commands:COMMANDS,limits:w.limits});
       let body=null;
@@ -80,6 +82,7 @@ export function createWorker({seed,assets}){
         const manifest=stateFor(w,p).objects.find(o=>o.kind==='simulationManifest')||null;
         return json({enabled:!!manifest,manifest,simulation:true,realOperationAllowed:false});
       }
+      if(request.method==='GET'&&path==='/api/exploration'){const x=w.exploration;return json({enabled:!!x,version:x?.version||null,routes:(x?.routes||[]).map(route=>({...route,kind:w.objects.find(o=>o.id===route.objectId)?.kind})),simulation:true});}
       if(request.method==='GET'&&path==='/api/state')return json({...stateFor(w,p,url.searchParams.get('id')||undefined),workspace:wid,workspaceVersion:loaded.version});
       if(request.method==='GET'&&path==='/api/kpis')return json(kpis(w,p));
       if(request.method==='GET'&&path==='/api/file'){
@@ -109,4 +112,4 @@ export function createWorker({seed,assets}){
   }};
 }
 function copyClock(w,now){const v=JSON.parse(JSON.stringify(w));v.clock=now;return v;}
-export default createWorker({seed:SEED,assets:ASSETS});
+export default createWorker({seed:SEED,assets:ASSETS,exploration:true});

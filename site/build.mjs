@@ -4,6 +4,9 @@ import {fileURLToPath} from 'node:url';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const assetsDir=path.join(root,'source-assets');
 const definitions={
+ '/driver/vendor/LICENSE':['vendor/LICENSE','text/plain; charset=utf-8'], '/driver/vendor/qrcode.LICENSE':['vendor/qrcode.LICENSE','text/plain; charset=utf-8'],
+ '/driver/scanner.js':['scanner.js','text/javascript; charset=utf-8'], '/driver/vendor/jsQR.js':['vendor/jsQR.js','text/javascript; charset=utf-8'], '/driver/vendor/qrcode.js':['vendor/qrcode.js','text/javascript; charset=utf-8'],
+ '/explore-guide.js':['../public-runtime/explore-guide.js','text/javascript; charset=utf-8'],
  '/form-state.js':['form-state.js','text/javascript; charset=utf-8'],
  '/navigation.js':['navigation.js','text/javascript; charset=utf-8'], '/navigation.css':['navigation.css','text/css; charset=utf-8'],
  '/':['index.html','text/html; charset=utf-8'], '/app.js':['app.js','text/javascript; charset=utf-8'], '/style.css':['style.css','text/css; charset=utf-8'], '/sw.js':['sw.js','text/javascript; charset=utf-8'],
@@ -25,11 +28,13 @@ for(const [url,[name,mime]] of Object.entries(definitions)){
    delete op.security;
    op.parameters=[...(op.parameters||[]),{name:'X-Lince-Workspace',in:'header',required:true,schema:{type:'string',format:'uuid'},description:'Identificador do cenário fictício compartilhável.'},{name:'X-Lince-Persona',in:'header',required:false,schema:{type:'string'},description:'ID de uma persona fictícia do cenário. Não é autenticação.'}];
   }
+  spec.paths['/api/exploration']={get:{summary:'Percursos fictícios pre-carregados do cenário',description:'Disponíveis em cenários novos; não altera cenários persistidos. Personas públicas, não autenticação empresarial.',responses:{'200':{description:'Estado de habilitação e roteiros com atores/objetos relacionados.'}}}};
   spec.paths['/api/personas']={get:{summary:'Listar personas fictícias do cenário',responses:{'200':{description:'Perfis públicos de simulação, sem senhas.'}}}};
   spec.paths['/api/inbox']={post:{summary:'Receber evento simulado no workspace',description:'Não é webhook de fornecedor real; operação depende do contrato do simulador público.',responses:{'200':{description:'Recebimento/projeção explicitamente simulados.'},'409':{description:'Conflito de estado ou identidade.'}}}};
   const workspaceHeader={name:'X-Lince-Workspace',in:'header',required:true,schema:{type:'string',format:'uuid'},description:'Cenário fictício compartilhável.'};
   const personaHeader={name:'X-Lince-Persona',in:'header',required:true,schema:{type:'string'},description:'Persona fictícia; não autenticação.'};
   spec.paths['/api/personas'].get.parameters=[workspaceHeader];
+  spec.paths['/api/exploration'].get.parameters=[workspaceHeader,personaHeader];
   spec.paths['/api/inbox'].post.parameters=[workspaceHeader,personaHeader,{name:'Idempotency-Key',in:'header',required:true,schema:{type:'string'},description:'Preservar em repetição da mesma solicitação.'}];
   spec.paths['/api/inbox'].post.requestBody={required:true,content:{'application/json':{schema:{type:'object',required:['eventId','type','payload'],properties:{eventId:{type:'string'},type:{enum:['TRACKING','WMS','ERP_ACK']},payload:{type:'object',description:'TRACKING segue Command_tracking; WMS usa shipmentId/custody; ERP_ACK usa entryIds/reference.'}}}}}};
   const envelope=spec.components?.schemas?.CommandEnvelope;
@@ -44,6 +49,7 @@ for(const [url,[name,mime]] of Object.entries(definitions)){
   let text=bytes.toString('utf8');
   text=text.replace('<head>','<head><script src="/demo-context.js"></script>');
   if(!text.includes('src="/demo-context.js"'))text=text.replace(/<head([^>]*)>/,'<head$1><script src="/demo-context.js"></script>');
+  text=text.replace('</head>','<script src="/explore-guide.js" defer></script></head>');
   if(name==='index.html')text=text.replace('</head>','<script src="/simulation-console.js" defer></script></head>');
   bytes=Buffer.from(text);
  }
@@ -51,7 +57,7 @@ for(const [url,[name,mime]] of Object.entries(definitions)){
   let text=bytes.toString('utf8');
   text=text.replace(/const SHELL = \[/,"const SHELL = ['/demo-context.js',");
   if(name==='sw.js')text=text.replace(/const ASSETS=\[/,"const ASSETS=['/demo-context.js','/simulation-console.js',");
-  text=text.replace('lince-driver-shell-v1','lince-driver-public-v2');
+  text=text.replace('lince-driver-shell-v1','lince-driver-public-v3-explore');
   if(name==='driver-sw.js')text=text.replace('|| url.search) return;',"|| (url.search && url.pathname !== '/driver/')) return;");
   bytes=Buffer.from(text);
  }
@@ -66,7 +72,8 @@ const seed=JSON.parse(read('seed.json'));
 const domainImports=read('worker.mjs').match(/import\s*\{([^}]+)\}\s*from\s*['"]\.\/domain\.mjs['"]/);
 if(!domainImports)throw new Error('Domain import contract missing');
 const imported=domainImports[1].split(',').map(x=>x.trim());
-const bundle='// Lince public simulation. Fictitious data only.\nconst SEED='+JSON.stringify(seed)+';\nconst ASSETS='+JSON.stringify(assets)+';\nconst __LinceDomain=(()=>{\n'+domain+'\nreturn {'+imported.join(',')+'};})();\nconst {'+imported.join(',')+'}=__LinceDomain;\n'+worker;
+const exploration=isolated('exploration.mjs',['createExploration']);
+const bundle='// Lince public simulation. Fictitious data only.\nconst SEED='+JSON.stringify(seed)+';\nconst ASSETS='+JSON.stringify(assets)+';\nconst __LinceDomain=(()=>{\n'+domain+'\nreturn {'+imported.join(',')+'};})();\nconst {'+imported.join(',')+'}=__LinceDomain;\n'+exploration+worker;
 const out=path.join(root,'dist/server');fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'index.js'),bundle);
 fs.mkdirSync(path.join(root,'dist/.openai'),{recursive:true});fs.copyFileSync(path.join(root,'.openai/hosting.json'),path.join(root,'dist/.openai/hosting.json'));
 console.log(JSON.stringify({assets:Object.keys(assets).length,seedObjects:seed.objects.length,bundleBytes:Buffer.byteLength(bundle)}));

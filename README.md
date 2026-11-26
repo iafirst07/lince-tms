@@ -1,3 +1,19 @@
+## Explorar o Lince com dados prontos — 26/11/2026
+
+Desktop: https://lince-tms.rafaelsiqueira7394.chatgpt.site · Motorista: https://lince-tms.rafaelsiqueira7394.chatgpt.site/driver/ . A demonstração pública usa personas fictícias, sem senha empresarial. Não informe dados pessoais ou corporativos.
+
+Use **Novo cenário** para carregar os exemplos novos; isso preserva os cenários anteriores. Abra **Comece por aqui: operação pronta para explorar**. Os quatro percursos adicionais mostram coleta com um recibo pendente, tarefa de reversa atribuída, compra multi-origem com frete único e reserva de doca. Cada percurso informa o perfil, o esperado e o link do registro. Os18cenários anteriores continuam disponíveis em Cenários de teste.
+
+Para compartilhar uma operação entre desktop e celular, use **Copiar link do cenário** e mantenha `?workspace=…`. O contexto instalado/standalone não foi homologado; a correção candidata de persistência anterior permanece excluída.
+
+No motorista, abra uma viagem e escolha a parada. **Mostrar etiquetas QR de teste** gera etiquetas com os volumes desse cenário. **Ler etiqueta ou QR deste pedido** abre o leitor: câmera somente após clicar **Abrir câmera**, imagem escolhida no aparelho ou entrada manual explicitamente identificada. A validação confere a chave exata da parada/tarefa; leitura não registra entrega. Confira os volumes e confirme a operação separadamente. Coleta e retorno possuem leitura própria de identificação, também sem baixa automática.
+
+O formato entregue é etiqueta com **QR**. Código de barras linear Code128/EAN não está implementado. Abrir câmera depende de HTTPS, permissão e suporte do aparelho; negue/cancele sem perder o cenário. Leitura por imagem/manual não equivale a teste físico da câmera. PWA é o pacote disponível; não há APK/IPA ou publicação de loja.
+
+Bibliotecas locais: jsQR (Apache2.0) e qrcode-generator (MIT), versões fixadas e sem CDN em execução. Licenças integrais em `application/vendor/LICENSE` e `application/vendor/qrcode.LICENSE`. Evidências de implementação, revisão e publicação ficam no registro responsável do projeto; testes de aparelho e produção têm aceites próprios.
+
+---
+
 ## Revisão funcional local — 26/11/2026
 
 Coleta e entrega agora distinguem parada, pedido e volumes, sem seleção automática de todos os volumes. O fluxo de compra multi-origem mantém uma cobrança ao consumidor, separada dos custos logísticos, com rateio em centavos. Tarifas podem optar por política versionada de cubagem; o divisor6000 exibido é exemplo sintético. Planos com coleta explícita exigem recibo de cada parada antes da saída. Reversa pode virar tarefa atribuída ao motorista. Docas têm capacidade, reserva, remarcação e check-in/out simulados.

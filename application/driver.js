@@ -130,7 +130,19 @@
     await confirmed();
     return result;
   }
-  const logic = {namespace, contextFor, selectTrips, snapshotView, scopeForStop, checkedStopKeys, restorableTripId, makeTaskRecord, sendPendingTask, makeRecord, sameUser, synchronize, sendPendingClaim};
+  function validateScannedPackage(trip, scope, key, pendingKeys=[]) {
+    if(!trip||!scope||scope.tripId!==trip.id||scope.planVersion!==trip.planVersion||scope.assignmentId!==trip.assignmentId)throw new Error('A tarefa mudou. Feche o leitor e confira a viagem atual.');
+    if(scope.type==='DELIVERY'){if(!['IN_TRANSIT','PARTIAL'].includes(trip.status)||trip.stage!=='DELIVERY')throw new Error('Esta tarefa não está em entrega.');return checkedStopKeys(trip,scope.orderId,[key],pendingKeys)[0];}
+    if(scope.type==='PICKUP'){
+      if(trip.status!=='ASSIGNED')throw new Error('Esta coleta não está disponível para conferência.');
+      const stop=(trip.pickupStops||[]).find(x=>x.stopId===scope.stopId&&x.type==='PICKUP');
+      if(!stop||!(stop.packageKeys||[]).includes(key)||!trip.packages.some(p=>p.key===key&&p.orderId===stop.orderId))throw new Error('Esta etiqueta não pertence aos volumes desta coleta.');
+      if((trip.pickupReceipts||[]).some(x=>x.stopId===stop.stopId&&x.status==='CONFIRMED'&&x.planVersion===trip.planVersion&&x.assignmentId===trip.assignmentId))throw new Error('Esta coleta já foi confirmada.');
+      return key;
+    }
+    throw new Error('Escolha uma tarefa válida antes de ler a etiqueta.');
+  }
+  const logic = {validateScannedPackage, namespace, contextFor, selectTrips, snapshotView, scopeForStop, checkedStopKeys, restorableTripId, makeTaskRecord, sendPendingTask, makeRecord, sameUser, synchronize, sendPendingClaim};
   if (typeof module !== 'undefined' && module.exports) module.exports = logic;
   root.LinceDriver = logic;
   if (!root.document) return;
@@ -201,7 +213,8 @@
   const send = (command, payload, key) => api('/api/command', {method: 'POST', body: {command, payload}, key});
   function authenticatedWorkspace() { $('#login-panel').hidden = true; $('#workspace').hidden = false; $('#actor').textContent = actor.username; }
   async function restoreSelection(user) {
-    const current = selected || await storage.selection(user);
+    const linked=new URLSearchParams(location.hash.slice(1)).get('trip');
+    const current = selected || (linked&&view.trips.some(t=>t.id===linked)?linked:null) || await storage.selection(user);
     if (!sameUser(actor,user)) return;
     const restored = restorableTripId(current,view,user);
     if (restored !== selected) selectedStop = null;
@@ -220,6 +233,7 @@
     renderTrips(); if (selected) renderDetails(selected); await renderQueue();
   }
   function renderTrips() {
+    closeScanner();
     const list = $('#trips'); list.replaceChildren();
     $('#cached-at').textContent = `Última consulta: ${dateText(view?.savedAt)}. ${online ? '' : 'Dados salvos; a autorização será verificada ao sincronizar.'}`;
     const trips = (view?.trips || []).filter(t => filter === 'all' || (filter === 'done' ? t.status === 'DELIVERED' : t.status !== 'DELIVERED')).sort((a, b) => String(a.start).localeCompare(String(b.start)));
@@ -233,21 +247,43 @@
       const card=element('article',undefined,'trip');card.append(element('h2',`Coleta de retorno · pedido ${task.orderId||'não informado'}`),element('p',`Tarefa ${task.taskId||'não atribuída'} · ${task.status}`));
       card.append(element('p',`Coletar no cliente: ${pointText(task.sourceSnapshot)}`),element('p',`Levar ao retorno: ${pointText(task.destinationSnapshot)}`),element('p',`Janela ${dateText(task.windowStart)} até ${dateText(task.windowEnd)}`));
       for(const key of task.packageKeys||[])card.append(element('p',`Volume identificado: ${key}`));
+      const labels=element('button','Etiquetas QR deste retorno');labels.type='button';labels.onclick=()=>labelsFor(task.packageKeys.map(key=>({key,id:key.split(':').at(-1)})),'Etiquetas da devolução');card.append(labels);
+      const read=element('button','Ler etiqueta deste retorno');read.type='button';read.disabled=task.status!=='AUTHORIZED';read.onclick=()=>{closeScanner();if(!root.LinceScanner){notice('Leitor indisponível. Atualize quando conectado.',true);return;}const user=clone(actor),taskAtStart=clone(task);scanController=root.LinceScanner.create();scanController.open({onCode(result){const current=view?.returns.find(x=>x.id===taskAtStart.id);if(!sameUser(actor,user)||!current||current.status!=='AUTHORIZED'||current.version!==taskAtStart.version||current.taskId!==taskAtStart.taskId||current.taskVersion!==taskAtStart.taskVersion)throw new Error('A tarefa de retorno mudou. Confira novamente.');if(!current.packageKeys.includes(result.packageKey))throw new Error('Esta etiqueta não pertence à tarefa de retorno.');read.textContent='Volume conferido: '+result.packageKey;notice('Volume do retorno identificado. Confirme a coleta separadamente.');},onError(error){notice(error.message||String(error),true);}});};card.append(read);
       const button=element('button','Confirmar coleta de retorno (simulação)');button.type='button';button.disabled=!online||!!pendingTask||task.status!=='AUTHORIZED'||!task.taskId||!task.sourceSnapshot||!task.destinationSnapshot||!view.commands.includes('driver_return_collect');
       button.onclick=async()=>{if(!confirm(`Conferiu os ${task.packageKeys.length} volumes desta tarefa de retorno? É declaração de simulação, sem prova física.`))return;await startTask('driver_return_collect',{id:task.id,version:task.version,taskId:task.taskId,packageKeys:clone(task.packageKeys),eventId:`driver-return-${uuid()}`},button);};card.append(button);list.append(card);
     }
   }
+  let scanController=null;
+  function closeScanner(){if(scanController){scanController.close();scanController=null;}}
+  function labelsFor(packs,title){
+    if(!root.LinceScanner){notice('O leitor e o gerador de etiquetas não carregaram. Atualize quando houver conexão.',true);return;}
+    const old=$('#label-dialog');if(old)old.remove();const dialog=element('dialog');dialog.id='label-dialog';dialog.setAttribute('aria-label','Etiquetas fictícias para testar o leitor');
+    dialog.append(element('h2',title),element('p','Etiquetas fictícias deste cenário. Ler seleciona o volume; não confirma coleta ou entrega.','small'));
+    for(const pack of packs){const card=element('article');card.className='label-card';const svg=new DOMParser().parseFromString(root.LinceScanner.encodeQrSvg('LINCE1:'+pack.key),'image/svg+xml').documentElement;svg.setAttribute('role','img');svg.setAttribute('aria-label','QR do volume '+pack.id);card.append(element('strong','Volume '+pack.id),element('p',pack.key),document.importNode(svg,true));dialog.append(card);}
+    const print=element('button','Imprimir etiquetas');print.type='button';print.onclick=()=>root.print();const close=element('button','Fechar etiquetas');close.type='button';close.onclick=()=>dialog.close();dialog.append(print,close);document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
+  }
+  function startPackageScanner(trip,scope,onAccepted){
+    closeScanner();if(!root.LinceScanner){notice('O leitor não carregou. Atualize o app quando houver conexão.',true);return;}
+    const actorAtStart=clone(actor);scanController=root.LinceScanner.create();
+    scanController.open({onCode(result){
+      if(!sameUser(actor,actorAtStart))throw new Error('O acesso mudou. Abra novamente sua tarefa.');
+      const current=view?.trips.find(x=>x.id===trip.id);if(!current)throw new Error('A viagem não está mais disponível.');const key=validateScannedPackage(current,scope,result.packageKey,pendingPackageKeys(current));onAccepted(key,current);notice('Etiqueta validada. Confira o volume e confirme a operação separadamente.');
+    },onError(error){notice(error.message||String(error),true);}});
+  }
   function pointText(point) { return point ? [point.name,point.addressLine,point.number,point.complement,point.district,point.city,point.uf,point.postalCode].filter(Boolean).join(', ') || 'Ponto não informado' : 'Ponto UNKNOWN. Consulte a operação; não inferir por CEP ou posição.'; }
   function renderDetails(id) {
+    closeScanner();
     document.body.classList.add("driver-trip-open");
     const trip = view?.trips.find(t => t.id === id); if (!trip) { selected = null; document.body.classList.remove('driver-trip-open'); $('#details').hidden = true; return; }
     $('#details').hidden = false; $('#trip-title').textContent = tripName(trip); $('#trip-summary').replaceChildren(element('span', statusText[trip.status] || trip.status, 'tag'), element('p', `${trip.delivered.length} de ${trip.packages.length} volumes entregues · etapa: ${statusText[trip.stage] || 'a conferir'}`));
+    const labels=element('button','Mostrar etiquetas QR de teste');labels.type='button';labels.onclick=()=>labelsFor(trip.packages,'Etiquetas da viagem');$('#trip-summary').append(labels);
     let pickupArea=$('#pickup-tasks');if(!pickupArea){pickupArea=element('section');pickupArea.id='pickup-tasks';$('#stops').before(pickupArea);}pickupArea.replaceChildren(element('h3','Coletas na origem (declaração simulada)'));
     if(!trip.pickupStops?.length)pickupArea.append(element('p','Origem de coleta UNKNOWN neste histórico. A passagem de custódia não comprova coleta física. Consulte a operação.','small'));
     for(const stop of trip.pickupStops||[]) {
       const item=element('article');item.append(element('strong',`Coleta do pedido ${stop.orderReference||stop.orderId} (${stop.orderId})`),element('p',pointText(stop.originSnapshot)),element('p',`Janela ${dateText(stop.windowStart)} até ${dateText(stop.windowEnd)}`));
       for(const key of stop.packageKeys||[])item.append(element('p',`Volume identificado: ${key}`));
       const done=(trip.pickupReceipts||[]).some(r=>r.stopId===stop.stopId&&r.status==='CONFIRMED'&&r.planVersion===trip.planVersion&&r.assignmentId===trip.assignmentId);
+      const read=element('button','Ler etiqueta desta coleta');read.type='button';read.disabled=done||trip.status!=='ASSIGNED';read.onclick=()=>startPackageScanner(trip,{tripId:trip.id,planVersion:trip.planVersion,assignmentId:trip.assignmentId,type:'PICKUP',stopId:stop.stopId},key=>{read.textContent='Volume conferido: '+key;});item.append(read);
       const button=element('button',done?'Coleta confirmada no sistema':'Confirmar volumes desta coleta');button.type='button';button.disabled=!online||!!pendingTask||done||trip.status!=='ASSIGNED'||stop.type!=='PICKUP'||!stop.originSnapshot||!stop.packageKeys?.length||!view.commands.includes('pickup_confirm');
       button.onclick=async()=>{if(!confirm(`Conferiu exatamente os ${stop.packageKeys.length} volumes do pedido ${stop.orderReference||stop.orderId} nesta origem? Declaração simulada, sem leitura física.`))return;await startTask('pickup_confirm',{shipmentId:trip.id,version:trip.version,planVersion:trip.planVersion,assignmentId:trip.assignmentId,stopId:stop.stopId,packageKeys:clone(stop.packageKeys),eventId:`driver-pickup-${uuid()}`},button);};item.append(button);pickupArea.append(item);
     }
@@ -278,6 +314,7 @@
       const label = element('label'), input = element('input'); input.type = 'checkbox'; input.name = 'packageKeys'; input.value = pack.key; input.disabled = pack.disabled; input.checked = false;
       label.append(input, document.createTextNode(`${pack.label}${trip.delivered.includes(pack.key) ? ' · já entregue' : localPending.includes(pack.key) ? ' · aguardando confirmação' : ''}`)); packages.append(label);
     }
+    if(scope.valid){const read=element('button','Ler etiqueta ou QR deste pedido');read.type='button';read.disabled=!scope.packages.some(x=>!x.disabled);read.onclick=()=>{const orderId=selectedStop?.orderId;startPackageScanner(trip,{tripId:trip.id,planVersion:trip.planVersion,assignmentId:trip.assignmentId,type:'DELIVERY',orderId},key=>{if(selected!==trip.id||selectedStop?.orderId!==orderId)throw new Error('A parada mudou. Confira novamente.');const input=[...$('#packages').querySelectorAll('input')].find(x=>x.value===key);if(!input||input.disabled)throw new Error('Volume indisponível nesta parada.');if(input.checked)throw new Error('Este volume já está selecionado. Nenhuma confirmação adicional foi criada.');input.checked=true;});};packages.append(read);}
     $('#claim-packages').replaceChildren();
     if (!scope.valid) $('#claim-packages').append(element('p',scope.reason,'small'));
     for (const pack of scope.packages) {
@@ -375,6 +412,7 @@
     finally { button.disabled = false; }
   });
   $('#logout').onclick = async () => {
+    closeScanner();
     authGeneration++; const oldSession = session; actor = null; view = null; selected = null; selectedStop = null; pendingTask=null; document.body.classList.remove('driver-trip-open'); $('#details').hidden=true;
     localStorage.removeItem('lince-driver-actor'); localStorage.setItem('lince-driver-signed-out', '1');
     $('#workspace').hidden = true; $('#login-panel').hidden = false; $('#password').value = '';
@@ -383,7 +421,7 @@
     finally { session = null; }
   };
   $('#refresh').onclick = async () => { try { await refresh(); notice('Viagens atualizadas.'); } catch (error) { notice(error.message, true); } };
-  $('#back').onclick = async () => { selected = null; selectedStop = null; document.body.classList.remove('driver-trip-open'); $('#details').hidden = true; $('#trips').scrollIntoView({behavior: 'smooth'}); if(actor)try { await storage.saveSelection(clone(actor),null); } catch(error) { notice('Não foi possível guardar o retorno à lista neste aparelho.',true); } };
+  $('#back').onclick = async () => { closeScanner(); selected = null; selectedStop = null; document.body.classList.remove('driver-trip-open'); $('#details').hidden = true; $('#trips').scrollIntoView({behavior: 'smooth'}); if(actor)try { await storage.saveSelection(clone(actor),null); } catch(error) { notice('Não foi possível guardar o retorno à lista neste aparelho.',true); } };
   document.querySelectorAll('[data-filter]').forEach(button => button.onclick = () => { filter = button.dataset.filter; document.querySelectorAll('[data-filter]').forEach(x => x.setAttribute('aria-pressed', String(x === button))); renderTrips(); });
   $('#stage').onclick = async () => {
     const button = $('#stage'); button.disabled = true;
@@ -424,6 +462,7 @@
   $('#sync').onclick = syncQueue;
   $('#persistent').onclick = async () => { const allowed = await navigator.storage?.persist?.(); notice(allowed ? 'O navegador concedeu armazenamento persistente. Limpar os dados do site ainda remove os registros locais.' : 'O navegador não concedeu persistência. Sincronize assim que possível.'); };
   root.addEventListener('online', () => { online = true; showConnection(); renderTrips(); if (selected) renderDetails(selected); renderQueue().catch(error=>notice(error.message,true)); notice('Conexão disponível. Confira e sincronize os registros pendentes.'); });
+  root.addEventListener('pagehide',closeScanner);
   root.addEventListener('offline', () => { online = false; showConnection(); renderTrips(); if (selected) renderDetails(selected); renderQueue().catch(error=>notice(error.message,true)); });
   root.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; $('#install').hidden = false; });
   $('#install').onclick = async () => { if (!installPrompt) return; await installPrompt.prompt(); installPrompt = null; $('#install').hidden = true; };

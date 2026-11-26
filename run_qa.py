@@ -5,9 +5,13 @@ import argparse,datetime,hashlib,json,shutil,subprocess,sys,time
 ROOT=Path(__file__).resolve().parent
 LAYERS={
  'front':[
+  ('scanner_qr',['node','application/test_scanner.cjs'],'.'),
+  ('scanner_context',['node','application/test_scan_integration.cjs'],'.'),
   ('edit_forms',['node','application/test_form_state.cjs'],'.'),
   ('driver_queue',['node','application/test_driver_logic.cjs'],'.')],
  'back':[
+  ('exploration_factory',['node','public-runtime/test-exploration.mjs'],'.'),
+  ('exploration_http',['node','public-runtime/test-exploration-http.mjs'],'.'),
   ('python_commerce_cubage_tasks_dock',[sys.executable,'-B','-m','unittest','test_commerce','test_volumetric','test_driver_tasks','test_dock'],'application'),
   ('public_commerce_cubage_tasks_dock',['node','--test','public-runtime/test-commerce.mjs','public-runtime/test-volumetric.mjs','public-runtime/test-volumetric-entry.mjs','public-runtime/test-driver-tasks.mjs','public-runtime/test-dock.mjs'],'.'),
   ('python_journey',[sys.executable,'-B','-m','unittest','test_tms_journey.TmsJourneyTests'],'application'),

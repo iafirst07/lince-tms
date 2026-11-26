@@ -1,3 +1,19 @@
+## Explorar o Lince com dados prontos — 26/11/2026
+
+Desktop: https://lince-tms.rafaelsiqueira7394.chatgpt.site · Motorista: https://lince-tms.rafaelsiqueira7394.chatgpt.site/driver/ . A demonstração pública usa personas fictícias, sem senha empresarial. Não informe dados pessoais ou corporativos.
+
+Use **Novo cenário** para carregar os exemplos novos; isso preserva os cenários anteriores. Abra **Comece por aqui: operação pronta para explorar**. Os quatro percursos adicionais mostram coleta com um recibo pendente, tarefa de reversa atribuída, compra multi-origem com frete único e reserva de doca. Cada percurso informa o perfil, o esperado e o link do registro. Os18cenários anteriores continuam disponíveis em Cenários de teste.
+
+Para compartilhar uma operação entre desktop e celular, use **Copiar link do cenário** e mantenha `?workspace=…`. O contexto instalado/standalone não foi homologado; a correção candidata de persistência anterior permanece excluída.
+
+No motorista, abra uma viagem e escolha a parada. **Mostrar etiquetas QR de teste** gera etiquetas com os volumes desse cenário. **Ler etiqueta ou QR deste pedido** abre o leitor: câmera somente após clicar **Abrir câmera**, imagem escolhida no aparelho ou entrada manual explicitamente identificada. A validação confere a chave exata da parada/tarefa; leitura não registra entrega. Confira os volumes e confirme a operação separadamente. Coleta e retorno possuem leitura própria de identificação, também sem baixa automática.
+
+O formato entregue é etiqueta com **QR**. Código de barras linear Code128/EAN não está implementado. Abrir câmera depende de HTTPS, permissão e suporte do aparelho; negue/cancele sem perder o cenário. Leitura por imagem/manual não equivale a teste físico da câmera. PWA é o pacote disponível; não há APK/IPA ou publicação de loja.
+
+Bibliotecas locais: jsQR (Apache2.0) e qrcode-generator (MIT), versões fixadas e sem CDN em execução. Licenças integrais em `application/vendor/LICENSE` e `application/vendor/qrcode.LICENSE`. Evidências de implementação, revisão e publicação ficam no registro responsável do projeto; testes de aparelho e produção têm aceites próprios.
+
+---
+
 # Lince — laboratório de simulação
 
 O inicializador cria uma operação fictícia de e-commerce pet para explorar o desktop, o app do motorista e as APIs locais com estados persistentes. Não usa dados, clientes, regras internas ou operações reais da Petlove. Os cenários são exemplos originais do produto Lince.
@@ -72,10 +88,20 @@ Se a inicialização falhar depois de alguns comandos, pode existir uma base nov
 
 Os testes funcionais em [application/test_simulation.py](application/test_simulation.py) cobrem estados e endereços no desktop, motorista com papel dedicado concluindo POD parcial/restante e replay offline positivo, OMS/WMS/inbox, recuperação `UNKNOWN` e triagem de DLQ, reabertura/integridade, manifesto sem credenciais, recusa de banco já populado e continuação de aprovação financeira e reversa.
 
-Resultados e histórico: [evidencias/simulacao-20261125](VALIDACAO.md). A primeira rodada encontrou duas falhas do próprio teste: texto esperado incompatível com a instrução da massa e conexão de leitura do teste não fechada no Windows. Ambas foram corrigidas sem ocultar o histórico. A contagem final está no resultado do autor; não equivale a cobertura total de todas as telas, permissões ou integrações reais.
+Resultados e histórico: [evidencias/simulacao-20261125](evidencias/simulacao-20261125). A primeira rodada encontrou duas falhas do próprio teste: texto esperado incompatível com a instrução da massa e conexão de leitura do teste não fechada no Windows. Ambas foram corrigidas sem ocultar o histórico. A contagem final está no resultado do autor; não equivale a cobertura total de todas as telas, permissões ou integrações reais.
 
 ```powershell
 python -B -m unittest -v test_simulation
 ```
 
 Executar em `application` com as dependências já documentadas. Nenhum banco em uso foi acessado pelos testes. A categoria de revisão de permissões previamente bloqueada não foi reexecutada e continua com seu gate próprio. A preparação fiscal está descrita em [FISCAL-INTEGRACAO.md](FISCAL-INTEGRACAO.md).
+
+## Critério humano adicional — exploração e leitura de etiqueta, 26/11/2026
+
+A primeira entrega deve vir com dados fictícios carregados e coerentes para navegar no desktop e no app do motorista, usando o mesmo cenário e observando o efeito das ações. Reutilizar os18cenários existentes, completando somente as lacunas; não criar outra massa desconectada nem apagar instâncias em uso.
+
+Leitura de etiqueta/QR code é requisito funcional explícito do app: ação visível abre o leitor/câmera mediante permissão; decodifica o identificador e valida seu vínculo à tarefa, pedido, parada e volume. A leitura apresenta o resultado, mas não deve, sozinha, dar baixa de entrega. O fluxo confirma a operação prevista e recebe confirmação do servidor. Código repetido não duplica efeito; código desconhecido/de outro contexto e volume já confirmado são tratados sem mutação indevida.
+
+Preparar etiquetas/QR de teste realmente legíveis, associados aos volumes da massa fictícia, e cenários de código correto, inválido, desconhecido, repetido, tarefa errada, permissão negada/cancelada e câmera indisponível. Entrada manual ou arquivo pode ser alternativa explicitamente identificada, sem substituir a prova da câmera. Definir simbologias de código de barras suportadas antes de prometer leitura de qualquer etiqueta. Não abrir URL contida em código automaticamente nem incluir dados pessoais nos códigos de teste.
+
+Aceite: abrir o leitor no app, ler o código de teste, mostrar o volume/tarefa corretos, confirmar a ação e consultar a mesma atualização no desktop; testar negativos e retomada pertinentes. Evidência separada por navegador e aparelhos-alvo. Estado deste requisito: REQUISITO_REGISTRADO_NAO_IMPLEMENTADO_NESTA_RODADA. Não há leitor/câmera validado por esta edição; bloqueio CONTEXT02 e gates anteriores preservados.
