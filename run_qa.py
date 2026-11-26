@@ -10,6 +10,8 @@ LAYERS={
   ('edit_forms',['node','application/test_form_state.cjs'],'.'),
   ('driver_queue',['node','application/test_driver_logic.cjs'],'.')],
  'back':[
+  ('live_operations',['node','public-runtime/test-live-operations.mjs'],'.'),
+  ('live_http',['node','public-runtime/test-live-http.mjs'],'.'),
   ('exploration_factory',['node','public-runtime/test-exploration.mjs'],'.'),
   ('exploration_http',['node','public-runtime/test-exploration-http.mjs'],'.'),
   ('python_commerce_cubage_tasks_dock',[sys.executable,'-B','-m','unittest','test_commerce','test_volumetric','test_driver_tasks','test_dock'],'application'),

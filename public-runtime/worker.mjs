@@ -1,7 +1,9 @@
+import {createLiveOperations} from './live-operations.mjs';
 import {createExploration} from './exploration.mjs';
 import {createWorkspace,choosePersona,personas,stateFor,executeCommand,fingerprintRequest,simulate,kpis,ApiError,COMMANDS} from './domain.mjs';
 import {SEED,ASSETS} from './generated.mjs';
 
+const liveOperations=createLiveOperations({executeCommand,choosePersona,ApiError});
 const enrichExploration=createExploration({executeCommand,choosePersona});
 const encoder=new TextEncoder();
 const json=(body,status=200,extra={})=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer',...extra}});
@@ -83,6 +85,17 @@ export function createWorker({seed,assets,exploration=false}){
         return json({enabled:!!manifest,manifest,simulation:true,realOperationAllowed:false});
       }
       if(request.method==='GET'&&path==='/api/exploration'){const x=w.exploration;return json({enabled:!!x,version:x?.version||null,routes:(x?.routes||[]).map(route=>({...route,kind:w.objects.find(o=>o.id===route.objectId)?.kind})),simulation:true});}
+      if(request.method==='GET'&&path==='/api/live-state')return json(liveOperations.read(w,p,{...Object.fromEntries(url.searchParams),now}));
+      if(request.method==='GET'&&path==='/api/live-document'){
+        const doc=liveOperations.document(w,p,url.searchParams.get('id'),url.searchParams.get('format')||'html');
+        return new Response(doc.body,{headers:{'Content-Type':doc.mime,'Content-Disposition':'inline; filename="'+doc.filename+'"','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'self'"}});
+      }
+      if(request.method==='POST'&&path==='/api/live-command'){
+        const key=request.headers.get('Idempotency-Key');assert(key,'IDEMPOTENCY_KEY_REQUIRED');
+        const changed=liveOperations.command(w,p,body.action,body.payload,key,now);
+        if(!changed.replayed)await persist(env.DB,wid,loaded.version,changed.workspace,now);
+        return json(changed.result);
+      }
       if(request.method==='GET'&&path==='/api/state')return json({...stateFor(w,p,url.searchParams.get('id')||undefined),workspace:wid,workspaceVersion:loaded.version});
       if(request.method==='GET'&&path==='/api/kpis')return json(kpis(w,p));
       if(request.method==='GET'&&path==='/api/file'){

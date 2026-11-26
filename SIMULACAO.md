@@ -1,3 +1,11 @@
+## Central de operação sintética — nova implementação
+
+A central `/live/` conecta mapa esquemático, visão do motorista, API passiva, webhooks locais e documentos demonstrativos. O link **Operação ao vivo** na barra pública mantém o mesmo cenário. O contrato e os limites estão em [OPERACAO-SINTETICA.md](OPERACAO-SINTETICA.md); evidências por versão em `evidencias/operacao-sintetica-20261126/`.
+
+GPS, documentos e respostas externas são sintéticos. Os pedidos, estados e confirmações são persistidos pelo próprio simulador. Não há emissão fiscal, localização real ou entrega externa; o backend Python e o Worker público mantêm aceites distintos. Revisão, publicação e UI devem ser consultadas no resultado desta unidade, sem inferir prontidão pela existência deste texto.
+
+---
+
 ## Explorar o Lince com dados prontos — 26/11/2026
 
 Desktop: https://lince-tms.rafaelsiqueira7394.chatgpt.site · Motorista: https://lince-tms.rafaelsiqueira7394.chatgpt.site/driver/ . A demonstração pública usa personas fictícias, sem senha empresarial. Não informe dados pessoais ou corporativos.

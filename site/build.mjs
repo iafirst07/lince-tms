@@ -4,6 +4,8 @@ import {fileURLToPath} from 'node:url';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const assetsDir=path.join(root,'source-assets');
 const definitions={
+ '/docs/live-api.json':['../public-runtime/live-api-contract.json','application/json; charset=utf-8'],
+ '/live/':['../public-runtime/live-console.html','text/html; charset=utf-8'], '/live/live-console.js':['../public-runtime/live-console.js','text/javascript; charset=utf-8'], '/live/live-console.css':['../public-runtime/live-console.css','text/css; charset=utf-8'],
  '/driver/vendor/LICENSE':['vendor/LICENSE','text/plain; charset=utf-8'], '/driver/vendor/qrcode.LICENSE':['vendor/qrcode.LICENSE','text/plain; charset=utf-8'],
  '/driver/scanner.js':['scanner.js','text/javascript; charset=utf-8'], '/driver/vendor/jsQR.js':['vendor/jsQR.js','text/javascript; charset=utf-8'], '/driver/vendor/qrcode.js':['vendor/qrcode.js','text/javascript; charset=utf-8'],
  '/explore-guide.js':['../public-runtime/explore-guide.js','text/javascript; charset=utf-8'],
@@ -37,6 +39,9 @@ for(const [url,[name,mime]] of Object.entries(definitions)){
   spec.paths['/api/exploration'].get.parameters=[workspaceHeader,personaHeader];
   spec.paths['/api/inbox'].post.parameters=[workspaceHeader,personaHeader,{name:'Idempotency-Key',in:'header',required:true,schema:{type:'string'},description:'Preservar em repetição da mesma solicitação.'}];
   spec.paths['/api/inbox'].post.requestBody={required:true,content:{'application/json':{schema:{type:'object',required:['eventId','type','payload'],properties:{eventId:{type:'string'},type:{enum:['TRACKING','WMS','ERP_ACK']},payload:{type:'object',description:'TRACKING segue Command_tracking; WMS usa shipmentId/custody; ERP_ACK usa entryIds/reference.'}}}}}};
+  spec.paths['/api/live-state']={get:{summary:'Consultar operacao sintetica integrada',description:'Mapa e posicoes sao ficticios. query now nao altera o relogio do servidor.',parameters:[workspaceHeader,personaHeader],responses:{'200':{description:'Catalogo e estado persistido da operacao sintetica; limites declarados.'}}}};
+  spec.paths['/api/live-command']={post:{summary:'Executar uma acao da demonstracao sintetica',description:'Pedido criado por API usa o dominio real do simulador. GPS e fiscal sao simulacoes sem emissao externa. O console /live/ fornece payloads executaveis e resultado.',parameters:[workspaceHeader,personaHeader,{name:'Idempotency-Key',in:'header',required:true,schema:{type:'string'}}],requestBody:{required:true,content:{'application/json':{schema:{type:'object',required:['action','payload'],properties:{action:{type:'string'},payload:{type:'object'}}}}}},responses:{'200':{description:'Resultado confirmado ou replay da mesma operacao.'},'400':{description:'Entrada invalida.'},'409':{description:'Conflito de estado, dados ou chave; reconciliar antes de nova tentativa.'}}}};
+  spec.paths['/api/live-document']={get:{summary:'Abrir XML ou impressao HTML sinteticos',description:'Sem assinatura, protocolo oficial ou validade fiscal. Nao e XMLSEFAZ.',parameters:[workspaceHeader,personaHeader,{name:'id',in:'query',required:true,schema:{type:'string'}},{name:'format',in:'query',schema:{enum:['xml','html'],default:'html'}}],responses:{'200':{description:'Artefato sintetico com identificacao permanente.'},'404':{description:'Documento inexistente no contexto visivel.'}}}};
   const envelope=spec.components?.schemas?.CommandEnvelope;
   if(envelope?.oneOf){
    envelope.oneOf=envelope.oneOf.filter(x=>x.properties?.command?.const!=='migration_rollback');
@@ -49,7 +54,7 @@ for(const [url,[name,mime]] of Object.entries(definitions)){
   let text=bytes.toString('utf8');
   text=text.replace('<head>','<head><script src="/demo-context.js"></script>');
   if(!text.includes('src="/demo-context.js"'))text=text.replace(/<head([^>]*)>/,'<head$1><script src="/demo-context.js"></script>');
-  text=text.replace('</head>','<script src="/explore-guide.js" defer></script></head>');
+  if(name!=='../public-runtime/live-console.html')text=text.replace('</head>','<script src="/explore-guide.js" defer></script></head>');
   if(name==='index.html')text=text.replace('</head>','<script src="/simulation-console.js" defer></script></head>');
   bytes=Buffer.from(text);
  }
@@ -73,7 +78,7 @@ const domainImports=read('worker.mjs').match(/import\s*\{([^}]+)\}\s*from\s*['"]
 if(!domainImports)throw new Error('Domain import contract missing');
 const imported=domainImports[1].split(',').map(x=>x.trim());
 const exploration=isolated('exploration.mjs',['createExploration']);
-const bundle='// Lince public simulation. Fictitious data only.\nconst SEED='+JSON.stringify(seed)+';\nconst ASSETS='+JSON.stringify(assets)+';\nconst __LinceDomain=(()=>{\n'+domain+'\nreturn {'+imported.join(',')+'};})();\nconst {'+imported.join(',')+'}=__LinceDomain;\n'+exploration+worker;
+const bundle='// Lince public simulation. Fictitious data only.\nconst SEED='+JSON.stringify(seed)+';\nconst ASSETS='+JSON.stringify(assets)+';\nconst __LinceDomain=(()=>{\n'+domain+'\nreturn {'+imported.join(',')+'};})();\nconst {'+imported.join(',')+'}=__LinceDomain;\n'+exploration+isolated('live-operations.mjs',['createLiveOperations'])+worker;
 const out=path.join(root,'dist/server');fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'index.js'),bundle);
 fs.mkdirSync(path.join(root,'dist/.openai'),{recursive:true});fs.copyFileSync(path.join(root,'.openai/hosting.json'),path.join(root,'dist/.openai/hosting.json'));
 console.log(JSON.stringify({assets:Object.keys(assets).length,seedObjects:seed.objects.length,bundleBytes:Buffer.byteLength(bundle)}));

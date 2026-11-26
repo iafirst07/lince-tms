@@ -1,0 +1,165 @@
+{
+  "classification": "PUBLIC_FICTITIOUS_SIMULATION_ONLY",
+  "api": {
+    "read": "read(workspace,persona,queryObject={now?,sessionId?}) returns {simulation,realOperationAllowed:false,liveOperations:{orders,sessions,documents,webhooks,inbox},catalog:{orders,shipments,locations,apiExample},limits}. No GET writes.",
+    "command": "command(workspace,persona,action,payload,key,now) returns {workspace,result,replayed}. Root persists returned workspace with existing CAS; original never mutated, failed subcommands return no draft.",
+    "document": "document(workspace,persona,documentId,format='html') returns {mime,body,filename}. format only xml/html. No writing/printing/network."
+  },
+  "payloads": {
+    "order_link": {
+      "orderId": "existing domain order ID"
+    },
+    "order_quote": {
+      "originCep": "existing quote contract",
+      "destinationCep": "existing quote contract",
+      "packages": "existing quote contract"
+    },
+    "order_create": {
+      "orderPayload": "existing order_create payload: externalId,quoteId,candidate,packages,locationId,windowStart,windowEnd,consumerCharge"
+    },
+    "passive_order": {
+      "messageId": "stable local sender event identity",
+      "orderId": "existing order ID OR orderPayload, exactly one",
+      "orderPayload": "existing order_create payload, optional alternative to orderId"
+    },
+    "session_create": {
+      "shipmentId": "existing noncancelled/noncompleted shipment; package.orderId must match shipment.orderIds",
+      "requiredDocuments": "optional unique array subset NFE_REFERENCE/CTE/MDFE; default all3. Empty only when explicitly requested as local simulation policy."
+    },
+    "start": {
+      "id": "session ID; all required docs must be DEMO_AUTHORIZED"
+    },
+    "advance": {
+      "id": "session ID; emits bounded synthetic route position using elapsed server clock at40km/h, not teleport"
+    },
+    "gps": {
+      "id": "session ID",
+      "sequence": "next integer starting1; existing equal sequence+full identical content is replay",
+      "lat": "finite number -90..90",
+      "lon": "finite number -180..180",
+      "accuracyM": "finite number0..10000",
+      "occurredAt": "UTC YYYY-MM-DDTHH:mm:ss.sssZ exact",
+      "eventId": "optional payload metadata; sequence is authoritative business identity"
+    },
+    "pause/offline/resume": {
+      "id": "session ID"
+    },
+    "occurrence": {
+      "id": "session ID",
+      "type": "DAMAGE|LOSS|DELAY|REFUSAL",
+      "description": "existing claim_create contract",
+      "packageKeys": "nonempty unique exact keys of linked shipment",
+      "eventId": "optional stable business event identity; if omitted HTTPkey is the identity"
+    },
+    "delivery": {
+      "id": "session ID",
+      "packageKeys": "nonempty unique exact keys of linked shipment",
+      "outcome": "DELIVERED|FAILED",
+      "reason": "existing pod contract",
+      "eventId": "optional stable business event identity; preserve on retry"
+    },
+    "document_prepare": {
+      "id": "session ID, PREPARED",
+      "type": "NFE_REFERENCE|CTE|MDFE|DACTE|DAMDFE|MANIFEST|LABEL",
+      "reference": "optional text; NFE_REFERENCE mandatory and starts SIM-"
+    },
+    "document_submit": {
+      "documentId": "existing document, session still PREPARED",
+      "mode": "GOOD|REJECT"
+    },
+    "document_correct": {
+      "documentId": "REJECTED only, session PREPARED",
+      "reference": "corrected local ref, SIM- for NFE_REFERENCE",
+      "reason": "required"
+    },
+    "document_query": {
+      "documentId": "existing visible document"
+    },
+    "document_cancel": {
+      "documentId": "notterminal document; session PREPARED",
+      "reason": "required"
+    },
+    "document_close": {
+      "documentId": "MDFE DEMO_AUTHORIZED only, session COMPLETE"
+    },
+    "webhook_enqueue": {
+      "id": "session ID",
+      "event": "POSITION|DELIVERY|ORDER_RECEIVED",
+      "target": "LOCAL_SANDBOX only; no URL"
+    },
+    "webhook_process": {
+      "messageId": "webhook id/messageId",
+      "mode": "GOOD|FAIL|LOST_RESPONSE"
+    },
+    "webhook_retry": {
+      "messageId": "FAILED_NO_EFFECT or DLQ only; UNKNOWN requires query"
+    },
+    "webhook_query": {
+      "messageId": "UNKNOWN reconciles one local ack/effect; never invokes external receiver"
+    }
+  },
+  "invariants": [
+    "w.liveOperations is the sole addon state; orders/quotes/claims/POD use executeCommand and actual object IDs, not a shadow business model.",
+    "New API order is VALIDATED and planned by existing desktop domain. It is never silently attached to a different sample trip. A session derives all orders/packages from its linked shipment.",
+    "Session movement does not satisfy or bypass existing stage/label/fiscal/assignment guards. POD only succeeds when the actual shipment is at DELIVERY with eligible keys.",
+    "Accepted GPS, occurrence and POD atomically enqueue automatic local outbox notifications with stable eventId/correlation and domain references. Limit100 can reject the whole event, never leave a partial claim/POD.",
+    "Same persona/key plus changed action/content conflicts; same business inbox/event/externalId under new HTTPkey dedups or conflicts by original canonical content. Active persona is resolved before replay.",
+    "No arbitrary URL, network, secret, GPS hardware, fiscal provider or payment involved. Public personas are not enterprise authentication.",
+    "Fiscal docs have local DRAFT/REJECTED/CORRECTED/DEMO_AUTHORIZED/CANCELLED/CLOSED_DEMO states. XML root LinceSyntheticDocument embeds escaped synthetic snapshot JSON; never SEFAZ namespace/schema or a legal authorization.",
+    "No changes to authorized docs after session start. Rejection/correction/rejection history remains; close MDFE only after linked shipment POD completes session."
+  ],
+  "timeAndLimits": {
+    "acceptedTime": "UTC exact milliseconds Z, valid calendar, no Date normalization",
+    "maxFutureSeconds": 0,
+    "maxGpsAgeSeconds": 120,
+    "staleAfterSeconds": 60,
+    "maxGpsSpeedKmh": 300,
+    "routeSimulationSpeedKmh": 40,
+    "sessions": 12,
+    "positionsPerSession": 120,
+    "documents": 100,
+    "webhooks": 100,
+    "idempotencyEntries": 300,
+    "note": "Root workspace serialized size/CAS limits still apply; these are simulation design bounds, not capacity/SLA claims."
+  },
+  "visibility": "Existing public persona chosen by choosePersona; pure-driver lists only sessions attached to that driver's current shipment and dependent documents/messages. Other public fictitious personas retain the existing broad simulation inspection model. Action capability checks are explicit local demo guards; not security campaign evidence.",
+  "version": "LINCE-LIVE-API-1",
+  "warning": "SYNTHETIC_SIMULATION_ONLY_NO_LEGAL_FISCAL_AUTHORIZATION",
+  "headers": [
+    "X-Lince-Workspace",
+    "X-Lince-Persona",
+    "Idempotency-Key for POST"
+  ],
+  "endpoint": "/api/live-command",
+  "envelope": {
+    "action": "one of actions",
+    "payload": {}
+  },
+  "stateEndpoint": "/api/live-state",
+  "documentEndpoint": "/api/live-document?id=...&format=xml|html",
+  "actions": [
+    "order_link",
+    "order_quote",
+    "order_create",
+    "passive_order",
+    "session_create",
+    "start",
+    "advance",
+    "gps",
+    "pause",
+    "offline",
+    "resume",
+    "occurrence",
+    "delivery",
+    "document_prepare",
+    "document_submit",
+    "document_correct",
+    "document_query",
+    "document_cancel",
+    "document_close",
+    "webhook_enqueue",
+    "webhook_process",
+    "webhook_retry",
+    "webhook_query"
+  ]
+}

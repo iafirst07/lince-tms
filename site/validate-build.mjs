@@ -5,7 +5,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const handler=(await import(pathToFileURL(path.join(root,'dist/server/index.js')).href+'?validate='+Date.now())).default;
 assert.equal(typeof handler.fetch,'function');
-const routes=['/driver/scanner.js','/driver/vendor/jsQR.js','/driver/vendor/qrcode.js','/driver/vendor/LICENSE','/driver/vendor/qrcode.LICENSE','/explore-guide.js','/form-state.js','/navigation.js','/navigation.css','/','/app.js','/style.css','/sw.js','/driver/','/driver/driver.js','/driver/driver.css','/driver/driver-sw.js','/driver/manifest.webmanifest','/driver/icon.svg','/driver/icon-192.png','/driver/icon-512.png','/docs/','/docs/openapi.json','/demo-context.js','/simulation-console.js'];
+const routes=['/docs/live-api.json','/live/','/live/live-console.js','/live/live-console.css','/driver/scanner.js','/driver/vendor/jsQR.js','/driver/vendor/qrcode.js','/driver/vendor/LICENSE','/driver/vendor/qrcode.LICENSE','/explore-guide.js','/form-state.js','/navigation.js','/navigation.css','/','/app.js','/style.css','/sw.js','/driver/','/driver/driver.js','/driver/driver.css','/driver/driver-sw.js','/driver/manifest.webmanifest','/driver/icon.svg','/driver/icon-192.png','/driver/icon-512.png','/docs/','/docs/openapi.json','/demo-context.js','/simulation-console.js'];
 for(const route of routes){const response=await handler.fetch(new Request('https://lince.example'+route),{});assert.equal(response.status,200,route);const bytes=await response.arrayBuffer();assert.ok(bytes.byteLength>0,route);}
 const spec=await(await handler.fetch(new Request('https://lince.example/docs/openapi.json'),{})).json();
 assert.ok(spec.openapi.startsWith('3.1.'));assert.equal(spec['x-runtime'],'PUBLIC_SIMULATION_ONLY');
@@ -17,3 +17,5 @@ const sw=await(await handler.fetch(new Request('https://lince.example/driver/dri
 const hosting=JSON.parse(fs.readFileSync(path.join(root,'.openai/hosting.json'),'utf8'));assert.ok(hosting.project_id);assert.ok(hosting.d1);assert.equal(hosting.static,undefined);
 assert.ok(fs.readFileSync(path.join(root,'drizzle/0000_lince_simulation.sql'),'utf8').includes('simulation_file_chunks'));
 console.log(JSON.stringify({compiledStaticRoutes:routes.length,publicCommandSchemas:81,manifest:'PASS',databaseMigration:'PRESENT',scope:'Compiled artifact static/document contracts, not browser or hosted D1'}));
+
+const live=await(await handler.fetch(new Request('https://lince.example/live/'),{})).text();assert.ok(live.includes('/demo-context.js'));assert.ok(live.includes('live-console.js'));

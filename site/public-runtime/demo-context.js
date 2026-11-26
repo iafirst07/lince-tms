@@ -74,6 +74,7 @@
     const fresh=document.createElement('button');fresh.type='button';fresh.textContent='Novo cenário';fresh.onclick=()=>{const target=new URL(location.href);target.searchParams.set('workspace',crypto.randomUUID());location.href=target.href;};toolbar.append(fresh);
     const desktop=document.createElement('a');desktop.href='/?workspace='+workspace;desktop.textContent='Gestão';toolbar.append(desktop);
     const driver=document.createElement('a');driver.href='/driver/?workspace='+workspace;driver.textContent='Motorista';toolbar.append(driver);
+    const live=document.createElement('a');live.href='/live/?workspace='+workspace;live.textContent='Operação ao vivo';toolbar.append(live);
     const docs=document.createElement('a');docs.href='/docs/?workspace='+workspace;docs.textContent='API e documentação';toolbar.append(docs);
   }
   async function installToolbar(){
